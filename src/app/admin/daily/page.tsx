@@ -3,7 +3,7 @@ import { DailyFilters } from "@/components/daily/DailyFilters";
 import { DailyScheduleEditor } from "@/components/daily/DailyScheduleEditor";
 import { accessibleTeams } from "@/lib/auth/teams";
 import { requireUser } from "@/lib/auth/guards";
-import { getOrCreateDailyEntries } from "@/lib/daily/demo-store";
+import { getOrCreateDailyEntries } from "@/lib/daily/store";
 import { listPartTimeEmployees } from "@/lib/employees/demo-store";
 import { teamBySlug, type TeamSlug } from "@/lib/employees/types";
 import {
@@ -36,7 +36,7 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
       ? requestedTeam
       : teams[0];
 
-  const entries = getOrCreateDailyEntries(selectedTeam.id, selectedDate);
+  const entries = await getOrCreateDailyEntries(selectedTeam.id, selectedDate);
   const template = getTemplateVersionForDate(selectedTeam.id, selectedDate);
   const scheduledEmployeeIds = new Set(
     entries.map((entry) => entry.employeeId).filter(Boolean),

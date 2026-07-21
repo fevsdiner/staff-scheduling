@@ -52,7 +52,7 @@ export async function pushScheduleDateToSheets(
   });
 
   const sheets = google.sheets({ version: "v4", auth });
-  const newDateRows = buildDataRowsForDate(date, teamIds);
+  const newDateRows = await buildDataRowsForDate(date, teamIds);
   const teamNames = teamIds
     .map((teamId) => teamById(teamId)?.name)
     .filter((name): name is string => Boolean(name));

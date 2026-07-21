@@ -3,7 +3,7 @@ import { getDemoTeams } from "@/lib/schedule/demo-data";
 import type { DaySchedule, ScheduleEntry, TeamSchedule } from "@/lib/schedule/types";
 import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatEmployeeDisplayName } from "@/lib/employees/display";
-import { ensureAllTeamsForDate } from "@/lib/daily/demo-store";
+import { ensureAllTeamsForDate } from "@/lib/daily/store";
 import { TEAM_OPTIONS, teamById } from "@/lib/employees/types";
 
 interface ScheduleRow {
@@ -140,8 +140,8 @@ async function fetchFromSupabase(date: string, teamFilter: string): Promise<DayS
   return groupScheduleRows((data ?? []) as unknown as ScheduleRow[], date);
 }
 
-function getLocalSchedule(date: string, teamFilter: string): DaySchedule {
-  const entries = ensureAllTeamsForDate(date).filter((entry) => {
+async function getLocalSchedule(date: string, teamFilter: string): Promise<DaySchedule> {
+  const entries = (await ensureAllTeamsForDate(date)).filter((entry) => {
     if (teamFilter === "all") return true;
     const team = teamById(entry.teamId);
     return team?.slug === teamFilter;

@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 
-import { getOrCreateDailyEntries } from "@/lib/daily/demo-store";
+import { getOrCreateDailyEntries } from "@/lib/daily/store";
 import type { DailyEntry } from "@/lib/daily/types";
 import { sortDailyEntries } from "@/lib/daily/sort";
 import { TEAM_OPTIONS, teamById } from "@/lib/employees/types";
@@ -53,7 +53,10 @@ function entryToRow(date: string, dayName: string, entry: DailyEntry): string[] 
 }
 
 /** Data rows for one date and selected teams only, without the header row. */
-export function buildDataRowsForDate(date: string, teamIds: string[]): string[][] {
+export async function buildDataRowsForDate(
+  date: string,
+  teamIds: string[],
+): Promise<string[][]> {
   const allowedTeamIds = new Set(teamIds);
   const dayName = format(parseISO(date), "EEEE");
   const rows: string[][] = [];
@@ -61,7 +64,7 @@ export function buildDataRowsForDate(date: string, teamIds: string[]): string[][
   for (const team of TEAM_OPTIONS) {
     if (!allowedTeamIds.has(team.id)) continue;
 
-    const teamEntries = sortDailyEntries(getOrCreateDailyEntries(team.id, date));
+    const teamEntries = sortDailyEntries(await getOrCreateDailyEntries(team.id, date));
     for (const entry of teamEntries) {
       rows.push(entryToRow(date, dayName, entry));
     }
@@ -71,8 +74,11 @@ export function buildDataRowsForDate(date: string, teamIds: string[]): string[][
 }
 
 /** Header + data rows for one date (used when seeding an empty sheet). */
-export function buildSheetRowsForDate(date: string, teamIds: string[]): string[][] {
-  return [Array.from(SHEET_HEADER), ...buildDataRowsForDate(date, teamIds)];
+export async function buildSheetRowsForDate(
+  date: string,
+  teamIds: string[],
+): Promise<string[][]> {
+  return [Array.from(SHEET_HEADER), ...(await buildDataRowsForDate(date, teamIds))];
 }
 
 export function sortSheetDataRows(rows: string[][]): string[][] {

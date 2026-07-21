@@ -53,7 +53,8 @@ function saveStore(store: DailyStore): void {
   writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
 
-function generateFromTemplate(teamId: string, date: string): DailyEntry[] {
+/** Returns daily entries for team+date, generating from template if missing. */
+export function generateFromTemplate(teamId: string, date: string): DailyEntry[] {
   const team = teamById(teamId);
   if (!team) throw new Error("Invalid team.");
 

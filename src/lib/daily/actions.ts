@@ -11,7 +11,7 @@ import {
   removeDailyEntry,
   resetDailyToTemplate,
   saveDailyEntries,
-} from "@/lib/daily/demo-store";
+} from "@/lib/daily/store";
 import type { DailySegment } from "@/lib/daily/types";
 import { teamById, teamBySlug, type TeamSlug } from "@/lib/employees/types";
 import { tryPushScheduleToSheets } from "@/lib/sheets/actions";
@@ -49,7 +49,7 @@ export async function saveDailyDayAction(
   }
 
   const entryIds = formData.getAll("entryId").map(String);
-  const existing = getOrCreateDailyEntries(teamId, date);
+  const existing = await getOrCreateDailyEntries(teamId, date);
 
   try {
     const entries = entryIds.map((entryId) => {
@@ -85,7 +85,7 @@ export async function saveDailyDayAction(
       };
     });
 
-    saveDailyEntries({ teamId, date, entries });
+    await saveDailyEntries({ teamId, date, entries });
     revalidatePath("/admin/daily");
     revalidatePath("/");
     const team = teamBySlug(teamSlug);
@@ -120,7 +120,7 @@ export async function resetDailyAction(formData: FormData): Promise<void> {
   const teamId = String(formData.get("teamId") ?? "");
   const date = String(formData.get("date") ?? "");
   assertTeamAccess(user, teamId);
-  resetDailyToTemplate(teamId, date);
+  await resetDailyToTemplate(teamId, date);
   revalidatePath("/admin/daily");
   revalidatePath("/");
 }
@@ -137,7 +137,7 @@ export async function addPartTimeAction(
   try {
     assertTeamAccess(user, teamId);
     const employee = getEmployeeById(employeeId);
-    addPartTimeEntry({
+    await addPartTimeEntry({
       teamId,
       date,
       employeeId,
@@ -159,7 +159,7 @@ export async function removePartTimeAction(formData: FormData): Promise<void> {
   const teamId = String(formData.get("teamId") ?? "");
   const entryId = String(formData.get("entryId") ?? "");
   assertTeamAccess(user, teamId);
-  removeDailyEntry(entryId);
+  await removeDailyEntry(entryId);
   revalidatePath("/admin/daily");
   revalidatePath("/");
 }
