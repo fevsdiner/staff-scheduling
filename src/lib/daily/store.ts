@@ -20,24 +20,19 @@ type SaveInput = {
   }>;
 };
 
-function useSupabaseDailyStore(): boolean {
-  return isSupabaseAdminConfigured();
-}
-
-function ensureDatabaseWriteConfig(): void {
-  if (process.env.VERCEL && isSupabaseConfigured() && !isSupabaseAdminConfigured()) {
-    throw new Error(
-      "Add SUPABASE_SERVICE_ROLE_KEY to Vercel (Supabase → Settings → API → service_role). The anon key can read schedules but cannot save admin changes.",
-    );
-  }
-}
+const MISSING_SERVICE_ROLE_MESSAGE =
+  "Add SUPABASE_SERVICE_ROLE_KEY to Vercel (Supabase → Settings → API → service_role). The anon key reads schedules but cannot save admin changes.";
 
 export async function getOrCreateDailyEntries(
   teamId: string,
   date: string,
 ): Promise<DailyEntry[]> {
-  if (useSupabaseDailyStore()) {
-    return supabaseStore.getOrCreateDailyEntries(teamId, date);
+  if (isSupabaseConfigured()) {
+    try {
+      return await supabaseStore.getOrCreateDailyEntries(teamId, date);
+    } catch (error) {
+      console.error("Supabase daily read failed:", error);
+    }
   }
   return demoStore.getOrCreateDailyEntries(teamId, date);
 }
@@ -46,23 +41,38 @@ export async function listDailyEntriesForDate(
   date: string,
   teamId?: string,
 ): Promise<DailyEntry[]> {
-  if (useSupabaseDailyStore()) {
-    return supabaseStore.listDailyEntriesForDate(date, teamId);
+  if (isSupabaseConfigured()) {
+    try {
+      return await supabaseStore.listDailyEntriesForDate(date, teamId);
+    } catch (error) {
+      console.error("Supabase daily list failed:", error);
+    }
   }
   return demoStore.listDailyEntriesForDate(date, teamId);
 }
 
 export async function ensureAllTeamsForDate(date: string): Promise<DailyEntry[]> {
-  if (useSupabaseDailyStore()) {
-    return supabaseStore.ensureAllTeamsForDate(date);
+  if (isSupabaseConfigured()) {
+    try {
+      const { TEAM_OPTIONS } = await import("@/lib/employees/types");
+      const entries: DailyEntry[] = [];
+      for (const team of TEAM_OPTIONS) {
+        entries.push(...(await supabaseStore.getOrCreateDailyEntries(team.id, date)));
+      }
+      return entries;
+    } catch (error) {
+      console.error("Supabase ensure-all-teams failed:", error);
+    }
   }
   return demoStore.ensureAllTeamsForDate(date);
 }
 
 export async function saveDailyEntries(input: SaveInput): Promise<DailyEntry[]> {
-  ensureDatabaseWriteConfig();
-  if (useSupabaseDailyStore()) {
+  if (isSupabaseAdminConfigured()) {
     return supabaseStore.saveDailyEntries(input);
+  }
+  if (process.env.VERCEL && isSupabaseConfigured()) {
+    throw new Error(MISSING_SERVICE_ROLE_MESSAGE);
   }
   return demoStore.saveDailyEntries(input);
 }
@@ -71,9 +81,11 @@ export async function resetDailyToTemplate(
   teamId: string,
   date: string,
 ): Promise<DailyEntry[]> {
-  ensureDatabaseWriteConfig();
-  if (useSupabaseDailyStore()) {
+  if (isSupabaseAdminConfigured()) {
     return supabaseStore.resetDailyToTemplate(teamId, date);
+  }
+  if (process.env.VERCEL && isSupabaseConfigured()) {
+    throw new Error(MISSING_SERVICE_ROLE_MESSAGE);
   }
   return demoStore.resetDailyToTemplate(teamId, date);
 }
@@ -83,17 +95,21 @@ export async function addPartTimeEntry(input: {
   date: string;
   employeeId: string;
 }): Promise<DailyEntry> {
-  ensureDatabaseWriteConfig();
-  if (useSupabaseDailyStore()) {
+  if (isSupabaseAdminConfigured()) {
     return supabaseStore.addPartTimeEntry(input);
+  }
+  if (process.env.VERCEL && isSupabaseConfigured()) {
+    throw new Error(MISSING_SERVICE_ROLE_MESSAGE);
   }
   return demoStore.addPartTimeEntry(input);
 }
 
 export async function removeDailyEntry(entryId: string): Promise<void> {
-  ensureDatabaseWriteConfig();
-  if (useSupabaseDailyStore()) {
+  if (isSupabaseAdminConfigured()) {
     return supabaseStore.removeDailyEntry(entryId);
+  }
+  if (process.env.VERCEL && isSupabaseConfigured()) {
+    throw new Error(MISSING_SERVICE_ROLE_MESSAGE);
   }
   demoStore.removeDailyEntry(entryId);
 }

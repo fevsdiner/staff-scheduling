@@ -4,7 +4,7 @@ import { generateFromTemplate } from "@/lib/daily/demo-store";
 import { sortDailyEntries } from "@/lib/daily/sort";
 import type { DailyEntry, DailySegment } from "@/lib/daily/types";
 import { getEmployeeById } from "@/lib/employees/demo-store";
-import { TEAM_OPTIONS } from "@/lib/employees/types";
+import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const ENTRY_SELECT = `
@@ -72,7 +72,7 @@ function toDbTime(time: string): string {
 }
 
 async function fetchEntries(teamId: string, date: string): Promise<DailyEntry[]> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseClient();
   const { data, error } = await supabase
     .from("daily_schedules")
     .select(ENTRY_SELECT)
@@ -112,7 +112,11 @@ async function insertEntries(entries: DailyEntry[]): Promise<void> {
       updated_at: entry.updatedAt,
     });
 
-    if (scheduleError) throw new Error(scheduleError.message);
+    if (scheduleError) {
+      throw new Error(
+        `${scheduleError.message} (employee: ${entry.employeeName}). Run supabase/seed.sql on your Supabase project if teams/employees are missing.`,
+      );
+    }
 
     if (!entry.isOff && entry.segments.length > 0) {
       const { error: segmentError } = await supabase.from("daily_schedule_segments").insert(
@@ -177,6 +181,7 @@ function buildValidatedEntries(input: {
   });
 }
 
+/** Read from Supabase; if empty, build from template in memory (no DB write until Save day). */
 export async function getOrCreateDailyEntries(
   teamId: string,
   date: string,
@@ -184,16 +189,14 @@ export async function getOrCreateDailyEntries(
   const existing = await fetchEntries(teamId, date);
   if (existing.length > 0) return existing;
 
-  const generated = generateFromTemplate(teamId, date);
-  await insertEntries(generated);
-  return sortDailyEntries(generated);
+  return sortDailyEntries(generateFromTemplate(teamId, date));
 }
 
 export async function listDailyEntriesForDate(
   date: string,
   teamId?: string,
 ): Promise<DailyEntry[]> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseClient();
   let query = supabase
     .from("daily_schedules")
     .select(ENTRY_SELECT)
@@ -206,13 +209,6 @@ export async function listDailyEntriesForDate(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return sortDailyEntries((data ?? []).map((row) => mapRow(row as ScheduleRow)));
-}
-
-export async function ensureAllTeamsForDate(date: string): Promise<DailyEntry[]> {
-  for (const team of TEAM_OPTIONS) {
-    await getOrCreateDailyEntries(team.id, date);
-  }
-  return listDailyEntriesForDate(date);
 }
 
 export async function saveDailyEntries(input: {
@@ -248,8 +244,6 @@ export async function addPartTimeEntry(input: {
   date: string;
   employeeId: string;
 }): Promise<DailyEntry> {
-  await getOrCreateDailyEntries(input.teamId, input.date);
-
   const employee = getEmployeeById(input.employeeId);
   if (!employee || !employee.active) {
     throw new Error("Employee not found.");
@@ -262,11 +256,7 @@ export async function addPartTimeEntry(input: {
   }
 
   const existing = await fetchEntries(input.teamId, input.date);
-  if (
-    existing.some(
-      (entry) => entry.employeeId === employee.id && entry.teamId === input.teamId,
-    )
-  ) {
+  if (existing.some((entry) => entry.employeeId === employee.id)) {
     throw new Error(`${employee.name} is already on this day's schedule.`);
   }
 
