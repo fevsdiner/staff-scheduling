@@ -9,7 +9,7 @@ import {
   getShiftsForDay,
   getTemplateVersion,
   listTemplateVersions,
-} from "@/lib/templates/demo-store";
+} from "@/lib/templates/store";
 import { DAYS_OF_WEEK } from "@/lib/templates/types";
 import { listEmployees } from "@/lib/employees/demo-store";
 import { teamBySlug, type TeamSlug } from "@/lib/employees/types";
@@ -35,13 +35,13 @@ export default async function TemplatePage({ searchParams }: TemplatePageProps) 
       ? requestedTeam
       : teams[0];
 
-  const versions = listTemplateVersions(selectedTeam.id);
+  const versions = await listTemplateVersions(selectedTeam.id);
   const selectedVersion =
     (params.version
-      ? getTemplateVersion(params.version)
+      ? await getTemplateVersion(params.version)
       : null) &&
     versions.some((version) => version.id === params.version)
-      ? getTemplateVersion(params.version!)!
+      ? (await getTemplateVersion(params.version!))!
       : versions[0];
 
   if (!selectedVersion) {
@@ -97,10 +97,7 @@ export default async function TemplatePage({ searchParams }: TemplatePageProps) 
             {teams.map((team) => (
               <Link
                 key={team.id}
-                href={hrefFor({
-                  team: team.slug,
-                  version: listTemplateVersions(team.id)[0]?.id,
-                })}
+                href={`/admin/template?team=${team.slug}`}
                 className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
                   team.id === selectedTeam.id
                     ? "bg-accent text-black"

@@ -11,7 +11,7 @@ import {
   getManilaTomorrow,
   isValidDateString,
 } from "@/lib/schedule/datetime";
-import { getTemplateVersionForDate } from "@/lib/templates/demo-store";
+import { getTemplateVersionForDate } from "@/lib/templates/store";
 
 interface DailyPageProps {
   searchParams: Promise<{ date?: string; team?: string }>;
@@ -37,7 +37,7 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
       : teams[0];
 
   const entries = await getOrCreateDailyEntries(selectedTeam.id, selectedDate);
-  const template = getTemplateVersionForDate(selectedTeam.id, selectedDate);
+  const template = await getTemplateVersionForDate(selectedTeam.id, selectedDate);
   const scheduledEmployeeIds = new Set(
     entries.map((entry) => entry.employeeId).filter(Boolean),
   );

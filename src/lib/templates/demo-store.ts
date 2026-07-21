@@ -28,7 +28,7 @@ function segmentsForEmployeeDay(name: string, dayOfWeek: number): TemplateSegmen
   );
 }
 
-function buildSeedVersion(teamId: string, label: string): TemplateVersion {
+export function buildSeedVersion(teamId: string, label: string): TemplateVersion {
   const employees = listEmployees().filter(
     (employee) =>
       employee.teamId === teamId &&

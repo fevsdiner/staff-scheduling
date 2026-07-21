@@ -10,7 +10,7 @@ import {
   createTemplateVersion,
   getTemplateVersion,
   saveDayShifts,
-} from "@/lib/templates/demo-store";
+} from "@/lib/templates/store";
 import type { TemplateSegment } from "@/lib/templates/types";
 
 export type TemplateActionState = {
@@ -41,7 +41,7 @@ export async function createVersionAction(
 
   try {
     assertTeamAccess(user, teamId);
-    const version = createTemplateVersion({
+    const version = await createTemplateVersion({
       teamId,
       versionLabel,
       effectiveFrom,
@@ -73,7 +73,7 @@ export async function saveDayAction(
   const dayOfWeek = Number(formData.get("dayOfWeek") ?? -1);
   const teamSlug = String(formData.get("teamSlug") ?? "") as TeamSlug;
 
-  const version = getTemplateVersion(versionId);
+  const version = await getTemplateVersion(versionId);
   if (!version) {
     return { error: "Template version not found." };
   }
@@ -104,7 +104,7 @@ export async function saveDayAction(
   });
 
   try {
-    saveDayShifts({ versionId, dayOfWeek, shifts });
+    await saveDayShifts({ versionId, dayOfWeek, shifts });
     revalidatePath("/admin/template");
     const team = teamBySlug(teamSlug);
     return {

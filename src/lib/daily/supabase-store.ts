@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 
-import { generateFromTemplate } from "@/lib/daily/demo-store";
+import { generateDailyEntriesFromTemplate } from "@/lib/daily/generate-from-template";
 import { sortDailyEntries } from "@/lib/daily/sort";
 import type { DailyEntry, DailySegment } from "@/lib/daily/types";
 import { getEmployeeById } from "@/lib/employees/demo-store";
@@ -189,7 +189,7 @@ export async function getOrCreateDailyEntries(
   const existing = await fetchEntries(teamId, date);
   if (existing.length > 0) return existing;
 
-  return sortDailyEntries(generateFromTemplate(teamId, date));
+  return sortDailyEntries(await generateDailyEntriesFromTemplate(teamId, date));
 }
 
 export async function listDailyEntriesForDate(
