@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 
+import { stableDailyEntryId } from "@/lib/daily/entry-id";
+
 import { canUseFileDataStore } from "@/lib/env";
 import { getEmployeeById, listEmployees } from "@/lib/employees/demo-store";
 import { ensureLocalDataDir, LOCAL_DATA_DIR } from "@/lib/local-data-store";
@@ -70,7 +72,7 @@ export function generateFromTemplate(teamId: string, date: string): DailyEntry[]
 
   if (!template) {
     return employees.map((employee) => ({
-      id: randomUUID(),
+      id: stableDailyEntryId(teamId, date, employee.id),
       scheduleDate: date,
       teamId,
       employeeId: employee.id,
@@ -88,7 +90,7 @@ export function generateFromTemplate(teamId: string, date: string): DailyEntry[]
   return employees.map((employee) => {
     const shift = shifts.find((entry) => entry.employeeId === employee.id);
     return {
-      id: randomUUID(),
+      id: stableDailyEntryId(teamId, date, employee.id),
       scheduleDate: date,
       teamId,
       employeeId: employee.id,

@@ -1,5 +1,4 @@
-import { randomUUID } from "crypto";
-
+import { stableDailyEntryId } from "@/lib/daily/entry-id";
 import { dayOfWeekFromDateString } from "@/lib/schedule/datetime";
 import { listEmployees } from "@/lib/employees/demo-store";
 import { teamById } from "@/lib/employees/types";
@@ -29,7 +28,7 @@ export async function generateDailyEntriesFromTemplate(
 
   if (!template) {
     return employees.map((employee) => ({
-      id: randomUUID(),
+      id: stableDailyEntryId(teamId, date, employee.id),
       scheduleDate: date,
       teamId,
       employeeId: employee.id,
@@ -47,7 +46,7 @@ export async function generateDailyEntriesFromTemplate(
   return employees.map((employee) => {
     const shift = shifts.find((entry) => entry.employeeId === employee.id);
     return {
-      id: randomUUID(),
+      id: stableDailyEntryId(teamId, date, employee.id),
       scheduleDate: date,
       teamId,
       employeeId: employee.id,
