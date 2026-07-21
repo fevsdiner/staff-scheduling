@@ -1,7 +1,9 @@
+import { readEnv } from "@/lib/env";
+
 export function isGoogleSheetsConfigured(): boolean {
   return Boolean(
-    process.env.GOOGLE_SHEETS_SPREADSHEET_ID &&
-      process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+    readEnv("GOOGLE_SHEETS_SPREADSHEET_ID") &&
+      readEnv("GOOGLE_SERVICE_ACCOUNT_JSON"),
   );
 }
 
@@ -10,8 +12,8 @@ export function getGoogleSheetsConfig(): {
   tabName: string;
   serviceAccountJson: string;
 } {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const spreadsheetId = readEnv("GOOGLE_SHEETS_SPREADSHEET_ID");
+  const serviceAccountJson = readEnv("GOOGLE_SERVICE_ACCOUNT_JSON");
 
   if (!spreadsheetId || !serviceAccountJson) {
     throw new Error(
@@ -21,7 +23,7 @@ export function getGoogleSheetsConfig(): {
 
   return {
     spreadsheetId,
-    tabName: process.env.GOOGLE_SHEETS_TAB_NAME ?? "Sheet1",
+    tabName: readEnv("GOOGLE_SHEETS_TAB_NAME") ?? "Sheet1",
     serviceAccountJson,
   };
 }

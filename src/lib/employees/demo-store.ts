@@ -1,11 +1,11 @@
 import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 
+import { canUseFileDataStore } from "@/lib/env";
+import { ensureLocalDataDir, LOCAL_DATA_DIR } from "@/lib/local-data-store";
 import { TEAM_OPTIONS, teamById, type Employee, type EmploymentType } from "@/lib/employees/types";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const STORE_PATH = path.join(DATA_DIR, "employees.json");
+const STORE_PATH = `${LOCAL_DATA_DIR}/employees.json`;
 
 type SeedEmployee = {
   id: string;
@@ -56,9 +56,17 @@ function hydrate(row: SeedEmployee): Employee {
   };
 }
 
+let memoryEmployees: Employee[] | null = null;
+
 function ensureStore(): Employee[] {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
+  if (!canUseFileDataStore()) {
+    memoryEmployees ??= SEED_EMPLOYEES.map(hydrate);
+    return memoryEmployees;
+  }
+
+  if (!ensureLocalDataDir()) {
+    memoryEmployees ??= SEED_EMPLOYEES.map(hydrate);
+    return memoryEmployees;
   }
 
   if (!existsSync(STORE_PATH)) {
@@ -72,8 +80,14 @@ function ensureStore(): Employee[] {
 }
 
 function saveStore(employees: Employee[]): void {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
+  if (!canUseFileDataStore()) {
+    memoryEmployees = employees;
+    return;
+  }
+
+  if (!ensureLocalDataDir()) {
+    memoryEmployees = employees;
+    return;
   }
   const compact = employees.map(
     ({ id, name, teamId, employmentType, active, createdAt }) => ({

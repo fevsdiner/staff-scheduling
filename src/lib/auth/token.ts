@@ -1,10 +1,11 @@
 import type { AuthUser, SessionPayload } from "@/lib/auth/types";
+import { readEnv } from "@/lib/env";
 
 export const SESSION_COOKIE = "fevs_session";
 const SESSION_DAYS = 7;
 
 function getAuthSecret(): string {
-  return process.env.AUTH_SECRET ?? "fevs-local-dev-secret-change-me";
+  return readEnv("AUTH_SECRET") ?? "fevs-local-dev-secret-change-me";
 }
 
 function encodeBase64Url(value: string): string {

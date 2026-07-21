@@ -1,8 +1,9 @@
 import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 
+import { canUseFileDataStore } from "@/lib/env";
 import { listEmployees } from "@/lib/employees/demo-store";
+import { ensureLocalDataDir, LOCAL_DATA_DIR } from "@/lib/local-data-store";
 import { TEAM_OPTIONS } from "@/lib/employees/types";
 import { WEEKLY_TEMPLATE_BY_EMPLOYEE } from "@/lib/templates/seed-schedule";
 import type {
@@ -11,8 +12,7 @@ import type {
   TemplateVersion,
 } from "@/lib/templates/types";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const STORE_PATH = path.join(DATA_DIR, "templates.json");
+const STORE_PATH = `${LOCAL_DATA_DIR}/templates.json`;
 
 interface TemplateStore {
   versions: TemplateVersion[];
@@ -61,14 +61,27 @@ function buildSeedVersion(teamId: string, label: string): TemplateVersion {
   };
 }
 
+let memoryStore: TemplateStore | null = null;
+
+function buildSeedStore(): TemplateStore {
+  return {
+    versions: TEAM_OPTIONS.map((team) => buildSeedVersion(team.id, "v1")),
+  };
+}
+
 function ensureStore(): TemplateStore {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
+  if (!canUseFileDataStore()) {
+    memoryStore ??= buildSeedStore();
+    return memoryStore;
+  }
+
+  if (!ensureLocalDataDir()) {
+    memoryStore ??= buildSeedStore();
+    return memoryStore;
   }
 
   if (!existsSync(STORE_PATH)) {
-    const versions = TEAM_OPTIONS.map((team) => buildSeedVersion(team.id, "v1"));
-    const store = { versions };
+    const store = buildSeedStore();
     writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
     return store;
   }
@@ -77,8 +90,14 @@ function ensureStore(): TemplateStore {
 }
 
 function saveStore(store: TemplateStore): void {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
+  if (!canUseFileDataStore()) {
+    memoryStore = store;
+    return;
+  }
+
+  if (!ensureLocalDataDir()) {
+    memoryStore = store;
+    return;
   }
   writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
