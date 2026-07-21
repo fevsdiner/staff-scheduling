@@ -181,15 +181,36 @@ function buildValidatedEntries(input: {
   });
 }
 
-/** Read from Supabase; if empty, build from template in memory (no DB write until Save day). */
+async function resolveDayEntries(teamId: string, date: string): Promise<DailyEntry[]> {
+  const existing = await fetchEntries(teamId, date);
+  const fromTemplate = await generateDailyEntriesFromTemplate(teamId, date);
+
+  if (existing.length === 0) {
+    return fromTemplate;
+  }
+
+  const existingEmployeeIds = new Set(
+    existing
+      .map((entry) => entry.employeeId)
+      .filter((employeeId): employeeId is string => employeeId !== null),
+  );
+  const missingFromTemplate = fromTemplate.filter(
+    (entry) => entry.employeeId && !existingEmployeeIds.has(entry.employeeId),
+  );
+
+  if (missingFromTemplate.length === 0) {
+    return existing;
+  }
+
+  return sortDailyEntries([...existing, ...missingFromTemplate]);
+}
+
+/** Read from Supabase; if empty or partial, merge with weekly template in memory (no DB write until Save day). */
 export async function getOrCreateDailyEntries(
   teamId: string,
   date: string,
 ): Promise<DailyEntry[]> {
-  const existing = await fetchEntries(teamId, date);
-  if (existing.length > 0) return existing;
-
-  return sortDailyEntries(await generateDailyEntriesFromTemplate(teamId, date));
+  return resolveDayEntries(teamId, date);
 }
 
 export async function listDailyEntriesForDate(
@@ -255,9 +276,27 @@ export async function addPartTimeEntry(input: {
     throw new Error("Employee is not on this team.");
   }
 
-  const existing = await fetchEntries(input.teamId, input.date);
-  if (existing.some((entry) => entry.employeeId === employee.id)) {
+  const dbExisting = await fetchEntries(input.teamId, input.date);
+  if (dbExisting.some((entry) => entry.employeeId === employee.id)) {
     throw new Error(`${employee.name} is already on this day's schedule.`);
+  }
+
+  if (dbExisting.length === 0) {
+    const baseEntries = await generateDailyEntriesFromTemplate(input.teamId, input.date);
+    await insertEntries(baseEntries);
+  } else {
+    const fromTemplate = await generateDailyEntriesFromTemplate(input.teamId, input.date);
+    const dbEmployeeIds = new Set(
+      dbExisting
+        .map((entry) => entry.employeeId)
+        .filter((employeeId): employeeId is string => employeeId !== null),
+    );
+    const missingFromTemplate = fromTemplate.filter(
+      (entry) => entry.employeeId && !dbEmployeeIds.has(entry.employeeId),
+    );
+    if (missingFromTemplate.length > 0) {
+      await insertEntries(missingFromTemplate);
+    }
   }
 
   const entry: DailyEntry = {
