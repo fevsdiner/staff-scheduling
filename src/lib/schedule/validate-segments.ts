@@ -54,6 +54,10 @@ function pickInvalidRangeField(start: number, end: number): "timeIn" | "timeOut"
   return "timeIn";
 }
 
+function isTimeFilled(time: string): boolean {
+  return Boolean(time.trim());
+}
+
 function emptySegmentValidation(): SegmentFieldValidation {
   return { timeInError: false, timeOutError: false, message: null };
 }
@@ -70,10 +74,16 @@ export function validateShiftSegments(
 
   for (let index = 0; index < segments.length; index += 1) {
     const { timeIn, timeOut } = segments[index];
-    const inFilled = Boolean(timeIn);
-    const outFilled = Boolean(timeOut);
+    const inFilled = isTimeFilled(timeIn);
+    const outFilled = isTimeFilled(timeOut);
 
     if (!inFilled && !outFilled) {
+      results[index] = {
+        timeInError: true,
+        timeOutError: true,
+        message: `${prefix}Enter both time-in and time-out.`,
+      };
+      hasErrors = true;
       parsed.push(null);
       continue;
     }
@@ -82,7 +92,9 @@ export function validateShiftSegments(
       results[index] = {
         timeInError: !inFilled,
         timeOutError: !outFilled,
-        message: `${prefix}Enter both time-in and time-out.`,
+        message: !inFilled
+          ? `${prefix}Enter time-in.`
+          : `${prefix}Enter time-out.`,
       };
       hasErrors = true;
       parsed.push(null);
@@ -93,8 +105,8 @@ export function validateShiftSegments(
     const end = timeToMinutes(timeOut);
     if (start === null || end === null) {
       results[index] = {
-        timeInError: true,
-        timeOutError: true,
+        timeInError: start === null,
+        timeOutError: end === null,
         message: `${prefix}Enter a valid time.`,
       };
       hasErrors = true;
