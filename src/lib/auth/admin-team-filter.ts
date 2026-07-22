@@ -15,7 +15,26 @@ export function resolveAdminTeamFilter(
   const allowAllTeams = options?.allowAllTeams === true && user.role === "manager";
   const defaultTeamSlug = allowAllTeams ? "all" : teams[0].slug;
 
-  if (allowAllTeams && teamParam === "all") {
+  if (allowAllTeams) {
+    if (!teamParam || teamParam === "all") {
+      return {
+        selectedTeamSlug: "all",
+        defaultTeamSlug,
+        showAllTeams: true,
+        selectedTeam: null,
+      };
+    }
+
+    const requestedTeam = teamBySlug(teamParam);
+    if (requestedTeam && teams.some((team) => team.id === requestedTeam.id)) {
+      return {
+        selectedTeamSlug: requestedTeam.slug,
+        defaultTeamSlug,
+        showAllTeams: true,
+        selectedTeam: requestedTeam,
+      };
+    }
+
     return {
       selectedTeamSlug: "all",
       defaultTeamSlug,
@@ -33,7 +52,7 @@ export function resolveAdminTeamFilter(
   return {
     selectedTeamSlug: selectedTeam.slug,
     defaultTeamSlug,
-    showAllTeams: allowAllTeams,
+    showAllTeams: false,
     selectedTeam,
   };
 }
