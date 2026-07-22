@@ -2,16 +2,24 @@ import Link from "next/link";
 
 import { requireUser } from "@/lib/auth/guards";
 
-const upcoming = [
+const tools = [
+  {
+    href: "/",
+    title: "Daily Schedule View",
+    description:
+      "See the live staff schedule on the home page — check updates without logging out.",
+    ready: true,
+    openInNewTab: true,
+  },
   {
     href: "/admin/daily",
-    title: "Daily schedule",
+    title: "Daily Schedule Editor",
     description: "Edit tomorrow’s shifts for your team (default date).",
     ready: true,
   },
   {
     href: "/admin/template",
-    title: "Weekly template",
+    title: "Weekly Template Editor",
     description: "Versioned week templates that auto-fill daily schedules.",
     ready: true,
   },
@@ -27,7 +35,7 @@ const upcoming = [
 export default async function AdminHomePage() {
   const user = await requireUser();
 
-  const links = upcoming.filter(
+  const links = tools.filter(
     (item) => !("managerOnly" in item && item.managerOnly) || user.role === "manager",
   );
 
@@ -61,9 +69,15 @@ export default async function AdminHomePage() {
                 {item.ready ? (
                   <Link
                     href={item.href}
+                    target={"openInNewTab" in item && item.openInNewTab ? "_blank" : undefined}
+                    rel={
+                      "openInNewTab" in item && item.openInNewTab
+                        ? "noopener noreferrer"
+                        : undefined
+                    }
                     className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-black"
                   >
-                    Open
+                    {"openInNewTab" in item && item.openInNewTab ? "View" : "Open"}
                   </Link>
                 ) : (
                   <span className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs text-muted">

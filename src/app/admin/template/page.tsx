@@ -47,7 +47,7 @@ export default async function TemplatePage({ searchParams }: TemplatePageProps) 
   if (!selectedVersion) {
     return (
       <div className="space-y-3">
-        <h1 className="text-lg font-semibold text-foreground">Weekly template</h1>
+        <h1 className="text-lg font-semibold text-foreground">Weekly Template Editor</h1>
         <p className="text-sm text-muted">No template versions yet for this team.</p>
         <NewVersionForm teamId={selectedTeam.id} copyFromVersionId="" />
       </div>
@@ -82,7 +82,7 @@ export default async function TemplatePage({ searchParams }: TemplatePageProps) 
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Weekly template</h1>
+          <h1 className="text-lg font-semibold text-foreground">Weekly Template Editor</h1>
           <p className="mt-0.5 text-sm text-muted">
             Defaults that auto-fill daily schedules · versioned by date
           </p>

@@ -49,7 +49,7 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Daily schedule</h1>
+          <h1 className="text-lg font-semibold text-foreground">Daily Schedule Editor</h1>
           <p className="mt-0.5 text-sm text-muted">
             {formatDisplayDate(selectedDate)}
             {selectedDate === defaultDate ? " · tomorrow" : ""}
