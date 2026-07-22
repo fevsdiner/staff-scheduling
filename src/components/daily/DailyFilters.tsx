@@ -10,6 +10,7 @@ interface DailyFiltersProps {
   teams: TeamOption[];
   defaultDate: string;
   firstTeamSlug: string;
+  basePath?: string;
 }
 
 function buildHref(
@@ -17,12 +18,13 @@ function buildHref(
   teamSlug: string,
   defaultDate: string,
   firstTeamSlug: string,
+  basePath: string,
 ): string {
   const query = new URLSearchParams();
   if (date !== defaultDate) query.set("date", date);
   if (teamSlug !== firstTeamSlug) query.set("team", teamSlug);
   const qs = query.toString();
-  return qs ? `/admin/daily?${qs}` : "/admin/daily";
+  return qs ? `${basePath}?${qs}` : basePath;
 }
 
 export function DailyFilters({
@@ -31,11 +33,12 @@ export function DailyFilters({
   teams,
   defaultDate,
   firstTeamSlug,
+  basePath = "/admin/daily",
 }: DailyFiltersProps) {
   const router = useRouter();
 
   function navigate(nextDate: string, nextTeamSlug: string) {
-    router.push(buildHref(nextDate, nextTeamSlug, defaultDate, firstTeamSlug));
+    router.push(buildHref(nextDate, nextTeamSlug, defaultDate, firstTeamSlug, basePath));
   }
 
   return (

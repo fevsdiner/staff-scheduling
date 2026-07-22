@@ -4,12 +4,11 @@ import { requireUser } from "@/lib/auth/guards";
 
 const tools = [
   {
-    href: "/",
+    href: "/admin/schedule",
     title: "Daily Schedule View",
     description:
-      "See the live staff schedule on the home page — check updates without logging out.",
+      "See the live staff schedule — same as the home page, without leaving admin.",
     ready: true,
-    openInNewTab: true,
   },
   {
     href: "/admin/daily",
@@ -69,15 +68,9 @@ export default async function AdminHomePage() {
                 {item.ready ? (
                   <Link
                     href={item.href}
-                    target={"openInNewTab" in item && item.openInNewTab ? "_blank" : undefined}
-                    rel={
-                      "openInNewTab" in item && item.openInNewTab
-                        ? "noopener noreferrer"
-                        : undefined
-                    }
                     className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-black"
                   >
-                    {"openInNewTab" in item && item.openInNewTab ? "View" : "Open"}
+                    Open
                   </Link>
                 ) : (
                   <span className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs text-muted">
