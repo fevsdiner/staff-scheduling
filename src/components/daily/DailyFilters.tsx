@@ -9,20 +9,21 @@ interface DailyFiltersProps {
   selectedTeamSlug: string;
   teams: TeamOption[];
   defaultDate: string;
-  firstTeamSlug: string;
+  defaultTeamSlug: string;
   basePath?: string;
+  showAllTeams?: boolean;
 }
 
 function buildHref(
   date: string,
   teamSlug: string,
   defaultDate: string,
-  firstTeamSlug: string,
+  defaultTeamSlug: string,
   basePath: string,
 ): string {
   const query = new URLSearchParams();
   if (date !== defaultDate) query.set("date", date);
-  if (teamSlug !== firstTeamSlug) query.set("team", teamSlug);
+  if (teamSlug !== defaultTeamSlug) query.set("team", teamSlug);
   const qs = query.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
@@ -32,13 +33,16 @@ export function DailyFilters({
   selectedTeamSlug,
   teams,
   defaultDate,
-  firstTeamSlug,
+  defaultTeamSlug,
   basePath = "/admin/daily",
+  showAllTeams = false,
 }: DailyFiltersProps) {
   const router = useRouter();
 
   function navigate(nextDate: string, nextTeamSlug: string) {
-    router.push(buildHref(nextDate, nextTeamSlug, defaultDate, firstTeamSlug, basePath));
+    router.push(
+      buildHref(nextDate, nextTeamSlug, defaultDate, defaultTeamSlug, basePath),
+    );
   }
 
   return (
@@ -60,6 +64,9 @@ export function DailyFilters({
           onChange={(event) => navigate(selectedDate, event.target.value)}
           className="h-10 rounded-lg border border-border bg-surface-raised px-3 text-sm text-foreground"
         >
+          {showAllTeams ? (
+            <option value="all">All Teams</option>
+          ) : null}
           {teams.map((team) => (
             <option key={team.id} value={team.slug}>
               {team.name}

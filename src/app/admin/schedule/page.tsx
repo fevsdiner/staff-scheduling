@@ -1,9 +1,9 @@
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DailyFilters } from "@/components/daily/DailyFilters";
 import { PublicScheduleView } from "@/components/schedule/PublicScheduleView";
+import { resolveAdminTeamFilter } from "@/lib/auth/admin-team-filter";
 import { accessibleTeams } from "@/lib/auth/teams";
 import { requireUser } from "@/lib/auth/guards";
-import { teamBySlug } from "@/lib/employees/types";
 import {
   formatDisplayDate,
   getManilaTomorrow,
@@ -30,13 +30,13 @@ export default async function AdminSchedulePage({
   const selectedDate =
     params.date && isValidDateString(params.date) ? params.date : defaultDate;
 
-  const requestedTeam = params.team ? teamBySlug(params.team) : undefined;
-  const selectedTeam =
-    requestedTeam && teams.some((team) => team.id === requestedTeam.id)
-      ? requestedTeam
-      : teams[0];
+  const { selectedTeamSlug, defaultTeamSlug, showAllTeams } = resolveAdminTeamFilter(
+    user,
+    teams,
+    params.team,
+  );
 
-  const schedule = await getScheduleForDate(selectedDate, selectedTeam.slug);
+  const schedule = await getScheduleForDate(selectedDate, selectedTeamSlug);
 
   return (
     <div className="space-y-4">
@@ -54,11 +54,12 @@ export default async function AdminSchedulePage({
       <section className="space-y-3 rounded-xl border border-border bg-surface p-3">
         <DailyFilters
           selectedDate={selectedDate}
-          selectedTeamSlug={selectedTeam.slug}
+          selectedTeamSlug={selectedTeamSlug}
           teams={teams}
           defaultDate={defaultDate}
-          firstTeamSlug={teams[0].slug}
+          defaultTeamSlug={defaultTeamSlug}
           basePath="/admin/schedule"
+          showAllTeams={showAllTeams}
         />
 
         <p className="text-xs text-muted">
