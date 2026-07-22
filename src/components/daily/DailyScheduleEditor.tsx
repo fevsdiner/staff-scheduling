@@ -85,7 +85,7 @@ export function DailyScheduleEditor({
     () =>
       rows.map((row) =>
         row.isOff
-          ? { segmentErrors: [] as (string | null)[], hasErrors: false }
+          ? { segments: [], hasErrors: false }
           : validateShiftSegments(row.segments, row.employeeName),
       ),
     [rows],
@@ -304,18 +304,20 @@ export function DailyScheduleEditor({
           </button>
         </form>
 
-        <button
-          type="submit"
-          form="daily-save-form"
-          disabled={pending || hasValidationErrors}
-          className={saveButtonClassName}
-        >
-          {pending ? "Saving…" : "Save day"}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="submit"
+            form="daily-save-form"
+            disabled={pending || hasValidationErrors}
+            className={saveButtonClassName}
+          >
+            {pending ? "Saving…" : "Save Day"}
+          </button>
+          {hasValidationErrors ? (
+            <p className="text-xs text-red-300">Fix time errors before saving.</p>
+          ) : null}
         </div>
-        {hasValidationErrors ? (
-          <p className="text-xs text-red-300">Fix time errors before saving.</p>
-        ) : null}
+        </div>
       </div>
     </div>
   );

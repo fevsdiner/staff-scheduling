@@ -5,10 +5,18 @@ export interface ShiftSegment {
   timeOut: string;
 }
 
+export interface SegmentFieldValidation {
+  timeInError: boolean;
+  timeOutError: boolean;
+  message: string | null;
+}
+
 export interface ShiftSegmentValidation {
-  segmentErrors: (string | null)[];
+  segments: SegmentFieldValidation[];
   hasErrors: boolean;
 }
+
+const MINUTES_PER_DAY = 24 * 60;
 
 function timeToMinutes(time: string): number | null {
   if (!/^\d{2}:\d{2}$/.test(time)) return null;
@@ -27,12 +35,35 @@ function formatOverlapRange(startMinutes: number, endMinutes: number): string {
   return `${formatTime(minutesToTime(startMinutes))} – ${formatTime(minutesToTime(endMinutes))}`;
 }
 
+function isValidSameDayRange(start: number, end: number): boolean {
+  return end > start && end < MINUTES_PER_DAY;
+}
+
+/** Pick which single field is most likely wrong when time-out is not after time-in. */
+function pickInvalidRangeField(start: number, end: number): "timeIn" | "timeOut" {
+  const outPlusTwelve = end + 720;
+  if (outPlusTwelve < MINUTES_PER_DAY && isValidSameDayRange(start, outPlusTwelve)) {
+    return "timeOut";
+  }
+
+  const inMinusTwelve = start - 720;
+  if (inMinusTwelve >= 0 && isValidSameDayRange(inMinusTwelve, end)) {
+    return "timeIn";
+  }
+
+  return "timeIn";
+}
+
+function emptySegmentValidation(): SegmentFieldValidation {
+  return { timeInError: false, timeOutError: false, message: null };
+}
+
 export function validateShiftSegments(
   segments: ShiftSegment[],
   contextLabel?: string,
 ): ShiftSegmentValidation {
   const prefix = contextLabel ? `${contextLabel}: ` : "";
-  const segmentErrors: (string | null)[] = segments.map(() => null);
+  const results: SegmentFieldValidation[] = segments.map(() => emptySegmentValidation());
   let hasErrors = false;
 
   const parsed: Array<{ start: number; end: number; index: number } | null> = [];
@@ -48,7 +79,11 @@ export function validateShiftSegments(
     }
 
     if (inFilled !== outFilled) {
-      segmentErrors[index] = `${prefix}Enter both time-in and time-out.`;
+      results[index] = {
+        timeInError: !inFilled,
+        timeOutError: !outFilled,
+        message: `${prefix}Enter both time-in and time-out.`,
+      };
       hasErrors = true;
       parsed.push(null);
       continue;
@@ -57,15 +92,23 @@ export function validateShiftSegments(
     const start = timeToMinutes(timeIn);
     const end = timeToMinutes(timeOut);
     if (start === null || end === null) {
-      segmentErrors[index] = `${prefix}Enter a valid time.`;
+      results[index] = {
+        timeInError: true,
+        timeOutError: true,
+        message: `${prefix}Enter a valid time.`,
+      };
       hasErrors = true;
       parsed.push(null);
       continue;
     }
 
     if (end <= start) {
-      segmentErrors[index] =
-        `${prefix}Time-out must be later than time-in on the same day.`;
+      const invalidField = pickInvalidRangeField(start, end);
+      results[index] = {
+        timeInError: invalidField === "timeIn",
+        timeOutError: invalidField === "timeOut",
+        message: `${prefix}Time-out must be later than time-in on the same day.`,
+      };
       hasErrors = true;
       parsed.push({ start, end, index });
       continue;
@@ -76,7 +119,7 @@ export function validateShiftSegments(
 
   const complete = parsed.filter(
     (segment): segment is { start: number; end: number; index: number } =>
-      segment !== null && segmentErrors[segment.index] === null,
+      segment !== null && results[segment.index].message === null,
   );
 
   for (let a = 0; a < complete.length; a += 1) {
@@ -88,16 +131,28 @@ export function validateShiftSegments(
 
       if (overlapStart < overlapEnd) {
         const overlapLabel = formatOverlapRange(overlapStart, overlapEnd);
-        segmentErrors[first.index] =
-          `${prefix}This block overlaps with block ${second.index + 1} (${overlapLabel}).`;
-        segmentErrors[second.index] =
-          `${prefix}This block overlaps with block ${first.index + 1} (${overlapLabel}).`;
+        const [earlier, later] =
+          first.start <= second.start ? [first, second] : [second, first];
+
+        const earlierMessage = `${prefix}This block overlaps with block ${later.index + 1} (${overlapLabel}).`;
+        const laterMessage = `${prefix}This block overlaps with block ${earlier.index + 1} (${overlapLabel}).`;
+
+        results[earlier.index] = {
+          timeInError: results[earlier.index].timeInError,
+          timeOutError: true,
+          message: earlierMessage,
+        };
+        results[later.index] = {
+          timeInError: true,
+          timeOutError: results[later.index].timeOutError,
+          message: laterMessage,
+        };
         hasErrors = true;
       }
     }
   }
 
-  return { segmentErrors, hasErrors };
+  return { segments: results, hasErrors };
 }
 
 export function assertValidShiftSegments(
@@ -106,6 +161,9 @@ export function assertValidShiftSegments(
 ): void {
   const result = validateShiftSegments(segments, contextLabel);
   if (result.hasErrors) {
-    throw new Error(result.segmentErrors.find(Boolean) ?? "Invalid time segments.");
+    throw new Error(
+      result.segments.find((segment) => segment.message)?.message ??
+        "Invalid time segments.",
+    );
   }
 }

@@ -35,8 +35,12 @@ export function ShiftSegmentFields({
   return (
     <div className="space-y-1.5">
       {segments.map((segment, index) => {
-        const segmentError = validation.segmentErrors[index];
-        const inputClassName = segmentError ? inputInvalidClassName : inputValidClassName;
+        const segmentValidation =
+          validation.segments[index] ?? {
+            timeInError: false,
+            timeOutError: false,
+            message: null,
+          };
 
         return (
           <div key={`${fieldId}-${index}`} className="space-y-1">
@@ -50,8 +54,12 @@ export function ShiftSegmentFields({
                 onChange={(event) =>
                   onSegmentChange(index, "timeIn", event.target.value)
                 }
-                className={inputClassName}
-                aria-invalid={segmentError ? true : undefined}
+                className={
+                  segmentValidation.timeInError
+                    ? inputInvalidClassName
+                    : inputValidClassName
+                }
+                aria-invalid={segmentValidation.timeInError ? true : undefined}
               />
               <span className="text-xs text-muted">→</span>
               <input
@@ -63,8 +71,12 @@ export function ShiftSegmentFields({
                 onChange={(event) =>
                   onSegmentChange(index, "timeOut", event.target.value)
                 }
-                className={inputClassName}
-                aria-invalid={segmentError ? true : undefined}
+                className={
+                  segmentValidation.timeOutError
+                    ? inputInvalidClassName
+                    : inputValidClassName
+                }
+                aria-invalid={segmentValidation.timeOutError ? true : undefined}
               />
               {segments.length > 1 ? (
                 <button
@@ -79,9 +91,9 @@ export function ShiftSegmentFields({
                 <span className="w-3" />
               )}
             </div>
-            {segmentError ? (
+            {segmentValidation.message ? (
               <p className="text-xs text-red-300" role="alert">
-                {segmentError}
+                {segmentValidation.message}
               </p>
             ) : null}
           </div>
