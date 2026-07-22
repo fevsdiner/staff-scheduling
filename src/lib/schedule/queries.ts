@@ -3,15 +3,12 @@ import { getDemoTeams } from "@/lib/schedule/demo-data";
 import type { DaySchedule, ScheduleEntry, TeamSchedule } from "@/lib/schedule/types";
 import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatEmployeeDisplayName } from "@/lib/employees/display";
-import { ensureAllTeamsForDate } from "@/lib/daily/store";
-import { TEAM_OPTIONS, teamById } from "@/lib/employees/types";
+import { listDailyEntriesForDate } from "@/lib/daily/store";
+import { TEAM_OPTIONS, teamById, teamBySlug } from "@/lib/employees/types";
 
 async function getLocalSchedule(date: string, teamFilter: string): Promise<DaySchedule> {
-  const entries = (await ensureAllTeamsForDate(date)).filter((entry) => {
-    if (teamFilter === "all") return true;
-    const team = teamById(entry.teamId);
-    return team?.slug === teamFilter;
-  });
+  const teamId = teamFilter === "all" ? undefined : teamBySlug(teamFilter)?.id;
+  const entries = await listDailyEntriesForDate(date, teamId);
 
   const teamMap = new Map<string, TeamSchedule>();
 

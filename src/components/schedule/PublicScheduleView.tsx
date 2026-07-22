@@ -11,7 +11,7 @@ export function PublicScheduleView({ schedule }: PublicScheduleViewProps) {
       <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-8 text-center">
         <p className="text-sm font-medium text-foreground">No schedule posted for this date.</p>
         <p className="mt-1 text-xs text-muted">
-          Supervisors can set the schedule once the admin tools are ready.
+          A supervisor must save the day in admin before it appears here.
         </p>
       </div>
     );
