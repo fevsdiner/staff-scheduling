@@ -1,19 +1,16 @@
 import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { DailyFilters } from "@/components/daily/DailyFilters";
 import { DailyScheduleEditor } from "@/components/daily/DailyScheduleEditor";
-import { PublicScheduleView } from "@/components/schedule/PublicScheduleView";
-import { resolveAdminTeamFilter } from "@/lib/auth/admin-team-filter";
 import { accessibleTeams } from "@/lib/auth/teams";
 import { requireUser } from "@/lib/auth/guards";
 import { getOrCreateDailyEntries } from "@/lib/daily/store";
 import { listPartTimeEmployees } from "@/lib/employees/demo-store";
-import type { TeamSlug } from "@/lib/employees/types";
+import { teamBySlug, type TeamSlug } from "@/lib/employees/types";
 import {
   formatDisplayDate,
   getManilaTomorrow,
   isValidDateString,
 } from "@/lib/schedule/datetime";
-import { getScheduleForDate } from "@/lib/schedule/queries";
 import { getTemplateVersionForDate } from "@/lib/templates/store";
 
 interface DailyPageProps {
@@ -33,10 +30,20 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
   const selectedDate =
     params.date && isValidDateString(params.date) ? params.date : defaultDate;
 
-  const { selectedTeamSlug, defaultTeamSlug, showAllTeams, selectedTeam } =
-    resolveAdminTeamFilter(user, teams, params.team);
+  const requestedTeam = params.team ? teamBySlug(params.team) : undefined;
+  const selectedTeam =
+    requestedTeam && teams.some((team) => team.id === requestedTeam.id)
+      ? requestedTeam
+      : teams[0];
 
-  const viewingAllTeams = selectedTeamSlug === "all";
+  const entries = await getOrCreateDailyEntries(selectedTeam.id, selectedDate);
+  const template = await getTemplateVersionForDate(selectedTeam.id, selectedDate);
+  const scheduledEmployeeIds = new Set(
+    entries.map((entry) => entry.employeeId).filter(Boolean),
+  );
+  const availablePartTime = listPartTimeEmployees(selectedTeam.id).filter(
+    (employee) => !scheduledEmployeeIds.has(employee.id),
+  );
 
   return (
     <div className="space-y-4">
@@ -54,75 +61,28 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
       <section className="space-y-3 rounded-xl border border-border bg-surface p-3">
         <DailyFilters
           selectedDate={selectedDate}
-          selectedTeamSlug={selectedTeamSlug}
+          selectedTeamSlug={selectedTeam.slug}
           teams={teams}
           defaultDate={defaultDate}
-          defaultTeamSlug={defaultTeamSlug}
-          showAllTeams={showAllTeams}
+          defaultTeamSlug={teams[0].slug}
         />
 
-        {viewingAllTeams ? (
-          <p className="text-xs text-muted">
-            Select a single team to edit shifts. All Teams shows a read-only overview.
-          </p>
-        ) : (
-          <TemplateNote teamId={selectedTeam!.id} date={selectedDate} />
-        )}
+        <p className="text-xs text-muted">
+          Template:{" "}
+          {template
+            ? `${template.versionLabel} (from ${template.effectiveFrom})`
+            : "none — employees marked Off until a template exists"}
+        </p>
       </section>
 
-      {viewingAllTeams ? (
-        <PublicScheduleView
-          schedule={await getScheduleForDate(selectedDate, "all")}
-        />
-      ) : (
-        <DailyEditorSection
-          teamId={selectedTeam!.id}
-          teamSlug={selectedTeam!.slug as TeamSlug}
-          date={selectedDate}
-        />
-      )}
+      <DailyScheduleEditor
+        key={`${selectedTeam.id}-${selectedDate}-${entries.map((entry) => entry.id).join(",")}`}
+        teamId={selectedTeam.id}
+        teamSlug={selectedTeam.slug as TeamSlug}
+        date={selectedDate}
+        entries={entries}
+        availablePartTime={availablePartTime}
+      />
     </div>
-  );
-}
-
-async function TemplateNote({ teamId, date }: { teamId: string; date: string }) {
-  const template = await getTemplateVersionForDate(teamId, date);
-
-  return (
-    <p className="text-xs text-muted">
-      Template:{" "}
-      {template
-        ? `${template.versionLabel} (from ${template.effectiveFrom})`
-        : "none — employees marked Off until a template exists"}
-    </p>
-  );
-}
-
-async function DailyEditorSection({
-  teamId,
-  teamSlug,
-  date,
-}: {
-  teamId: string;
-  teamSlug: TeamSlug;
-  date: string;
-}) {
-  const entries = await getOrCreateDailyEntries(teamId, date);
-  const scheduledEmployeeIds = new Set(
-    entries.map((entry) => entry.employeeId).filter(Boolean),
-  );
-  const availablePartTime = listPartTimeEmployees(teamId).filter(
-    (employee) => !scheduledEmployeeIds.has(employee.id),
-  );
-
-  return (
-    <DailyScheduleEditor
-      key={`${teamId}-${date}-${entries.map((entry) => entry.id).join(",")}`}
-      teamId={teamId}
-      teamSlug={teamSlug}
-      date={date}
-      entries={entries}
-      availablePartTime={availablePartTime}
-    />
   );
 }

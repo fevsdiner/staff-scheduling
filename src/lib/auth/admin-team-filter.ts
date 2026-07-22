@@ -5,20 +5,21 @@ export function resolveAdminTeamFilter(
   user: AuthUser,
   teams: TeamOption[],
   teamParam?: string,
+  options?: { allowAllTeams?: boolean },
 ): {
   selectedTeamSlug: string;
   defaultTeamSlug: string;
   showAllTeams: boolean;
   selectedTeam: TeamOption | null;
 } {
-  const showAllTeams = user.role === "manager";
-  const defaultTeamSlug = showAllTeams ? "all" : teams[0].slug;
+  const allowAllTeams = options?.allowAllTeams === true && user.role === "manager";
+  const defaultTeamSlug = allowAllTeams ? "all" : teams[0].slug;
 
-  if (showAllTeams && teamParam === "all") {
+  if (allowAllTeams && teamParam === "all") {
     return {
       selectedTeamSlug: "all",
       defaultTeamSlug,
-      showAllTeams,
+      showAllTeams: true,
       selectedTeam: null,
     };
   }
@@ -32,7 +33,7 @@ export function resolveAdminTeamFilter(
   return {
     selectedTeamSlug: selectedTeam.slug,
     defaultTeamSlug,
-    showAllTeams,
+    showAllTeams: allowAllTeams,
     selectedTeam,
   };
 }

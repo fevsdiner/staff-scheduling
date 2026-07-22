@@ -34,6 +34,7 @@ export default async function AdminSchedulePage({
     user,
     teams,
     params.team,
+    { allowAllTeams: true },
   );
 
   const schedule = await getScheduleForDate(selectedDate, selectedTeamSlug);
