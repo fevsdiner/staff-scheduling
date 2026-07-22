@@ -4,6 +4,7 @@ import { generateDailyEntriesFromTemplate } from "@/lib/daily/generate-from-temp
 import { sortDailyEntries } from "@/lib/daily/sort";
 import type { DailyEntry, DailySegment } from "@/lib/daily/types";
 import { getEmployeeById } from "@/lib/employees/demo-store";
+import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -159,10 +160,8 @@ function buildValidatedEntries(input: {
     if (!entry.isOff && segments.length === 0) {
       throw new Error(`${entry.employeeName}: working shifts need a time segment.`);
     }
-    for (const segment of segments) {
-      if (segment.timeIn >= segment.timeOut) {
-        throw new Error(`${entry.employeeName}: time-in must be before time-out.`);
-      }
+    if (!entry.isOff) {
+      assertValidShiftSegments(segments, entry.employeeName);
     }
 
     return {

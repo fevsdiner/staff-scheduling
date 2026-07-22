@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 
 import { accentButtonClassName } from "@/components/admin/AdminBackLink";
+import { ShiftSegmentFields } from "@/components/schedule/ShiftSegmentFields";
 import {
   saveDayAction,
   type TemplateActionState,
 } from "@/lib/templates/actions";
-import { TIME_INPUT_STEP_SECONDS } from "@/lib/schedule/time-input";
-import { MAX_SEGMENTS, type TemplateShift } from "@/lib/templates/types";
+import { validateShiftSegments } from "@/lib/schedule/validate-segments";
+import type { TemplateShift } from "@/lib/templates/types";
 import type { Employee } from "@/lib/employees/types";
 
 const initialState: TemplateActionState = {};
@@ -58,6 +59,17 @@ export function TemplateDayEditor({
   const [rows, setRows] = useState(() => toState(employees, shifts));
   const [state, formAction, pending] = useActionState(saveDayAction, initialState);
 
+  const rowValidations = useMemo(
+    () =>
+      rows.map((row) =>
+        row.isOff
+          ? { segmentErrors: [] as (string | null)[], hasErrors: false }
+          : validateShiftSegments(row.segments, row.name),
+      ),
+    [rows],
+  );
+  const hasValidationErrors = rowValidations.some((validation) => validation.hasErrors);
+
   function updateRow(employeeId: string, patch: Partial<EmployeeDayState>) {
     setRows((current) =>
       current.map((row) =>
@@ -103,7 +115,7 @@ export function TemplateDayEditor({
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        {rows.map((row) => (
+        {rows.map((row, rowIndex) => (
           <div
             key={row.employeeId}
             className="space-y-2 border-b border-border/70 px-3 py-3 last:border-b-0 sm:px-4"
@@ -132,92 +144,46 @@ export function TemplateDayEditor({
             </div>
 
             {!row.isOff ? (
-              <div className="space-y-1.5">
-                {row.segments.map((segment, index) => (
-                  <div
-                    key={`${row.employeeId}-${index}`}
-                    className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-1.5"
-                  >
-                    <input
-                      type="time"
-                      step={TIME_INPUT_STEP_SECONDS}
-                      name={`seg_${row.employeeId}_${index}_in`}
-                      value={segment.timeIn}
-                      onChange={(event) =>
-                        updateSegment(
-                          row.employeeId,
-                          index,
-                          "timeIn",
-                          event.target.value,
-                        )
-                      }
-                      className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-sm text-foreground"
-                    />
-                    <span className="text-xs text-muted">→</span>
-                    <input
-                      type="time"
-                      step={TIME_INPUT_STEP_SECONDS}
-                      name={`seg_${row.employeeId}_${index}_out`}
-                      value={segment.timeOut}
-                      onChange={(event) =>
-                        updateSegment(
-                          row.employeeId,
-                          index,
-                          "timeOut",
-                          event.target.value,
-                        )
-                      }
-                      className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-sm text-foreground"
-                    />
-                    {row.segments.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateRow(row.employeeId, {
-                            segments: row.segments.filter((_, i) => i !== index),
-                          })
-                        }
-                        className="text-xs text-muted hover:text-red-300"
-                        aria-label="Remove segment"
-                      >
-                        ✕
-                      </button>
-                    ) : (
-                      <span className="w-3" />
-                    )}
-                  </div>
-                ))}
-
-                {row.segments.length < MAX_SEGMENTS ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateRow(row.employeeId, {
-                        segments: [
-                          ...row.segments,
-                          { timeIn: "17:30", timeOut: "22:30" },
-                        ],
-                      })
-                    }
-                    className="text-xs font-medium text-accent hover:underline"
-                  >
-                    + Add segment
-                  </button>
-                ) : null}
-              </div>
+              <ShiftSegmentFields
+                fieldId={row.employeeId}
+                segments={row.segments}
+                validation={rowValidations[rowIndex]}
+                onSegmentChange={(index, field, value) =>
+                  updateSegment(row.employeeId, index, field, value)
+                }
+                onRemoveSegment={(index) =>
+                  updateRow(row.employeeId, {
+                    segments: row.segments.filter((_, i) => i !== index),
+                  })
+                }
+                onAddSegment={() =>
+                  updateRow(row.employeeId, {
+                    segments: [
+                      ...row.segments,
+                      { timeIn: "17:30", timeOut: "22:30" },
+                    ],
+                  })
+                }
+                addLabel="+ Add segment"
+              />
             ) : null}
           </div>
         ))}
       </div>
 
-      <div className="flex justify-end pt-1">
-        <button
-          type="submit"
-          disabled={pending}
-          className={`${accentButtonClassName} disabled:opacity-60`}
-        >
-          {pending ? "Saving…" : "Save day"}
-        </button>
+      <div className="space-y-2 pt-1">
+        {hasValidationErrors ? (
+          <p className="text-xs text-red-300">Fix time errors before saving.</p>
+        ) : null}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={pending || hasValidationErrors}
+            className={`${accentButtonClassName} disabled:opacity-60`}
+          >
+            {pending ? "Saving…" : "Save day"}
+          </button>
+        </div>
       </div>
     </form>
   );

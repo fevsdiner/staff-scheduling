@@ -14,6 +14,7 @@ import {
 } from "@/lib/templates/demo-store";
 import type { DailyEntry, DailySegment, DailyStore } from "@/lib/daily/types";
 import { sortDailyEntries } from "@/lib/daily/sort";
+import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
 
 const STORE_PATH = `${LOCAL_DATA_DIR}/daily-schedules.json`;
 
@@ -173,10 +174,8 @@ export function saveDailyEntries(input: {
     if (!entry.isOff && segments.length === 0) {
       throw new Error(`${entry.employeeName}: working shifts need a time segment.`);
     }
-    for (const segment of segments) {
-      if (segment.timeIn >= segment.timeOut) {
-        throw new Error(`${entry.employeeName}: time-in must be before time-out.`);
-      }
+    if (!entry.isOff) {
+      assertValidShiftSegments(segments, entry.employeeName);
     }
 
     return {

@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 
 import { canUseFileDataStore } from "@/lib/env";
 import { listEmployees } from "@/lib/employees/demo-store";
+import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
 import { ensureLocalDataDir, LOCAL_DATA_DIR } from "@/lib/local-data-store";
 import { TEAM_OPTIONS } from "@/lib/employees/types";
 import { WEEKLY_TEMPLATE_BY_EMPLOYEE } from "@/lib/templates/seed-schedule";
@@ -242,10 +243,11 @@ export function saveDayShifts(input: {
       throw new Error("Working shifts need at least one time segment.");
     }
 
-    for (const segment of segments) {
-      if (segment.timeIn >= segment.timeOut) {
-        throw new Error("Time-in must be before time-out.");
-      }
+    const employee = listEmployees().find(
+      (entry) => entry.id === shift.employeeId,
+    );
+    if (!shift.isOff) {
+      assertValidShiftSegments(segments, employee?.name ?? "Employee");
     }
 
     return {

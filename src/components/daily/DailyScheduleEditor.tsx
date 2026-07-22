@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import {
   addPartTimeAction,
@@ -11,12 +11,12 @@ import {
   type DailyActionState,
 } from "@/lib/daily/actions";
 import { accentButtonClassName } from "@/components/admin/AdminBackLink";
+import { ShiftSegmentFields } from "@/components/schedule/ShiftSegmentFields";
 import type { DailyEntry } from "@/lib/daily/types";
 import { sortDailyEntries } from "@/lib/daily/sort";
 import { formatEmployeeDisplayName } from "@/lib/employees/display";
 import type { Employee } from "@/lib/employees/types";
-import { TIME_INPUT_STEP_SECONDS } from "@/lib/schedule/time-input";
-import { MAX_SEGMENTS } from "@/lib/templates/types";
+import { validateShiftSegments } from "@/lib/schedule/validate-segments";
 
 const initialState: DailyActionState = {};
 
@@ -81,6 +81,17 @@ export function DailyScheduleEditor({
     }
   }, [ptState.success, router]);
 
+  const rowValidations = useMemo(
+    () =>
+      rows.map((row) =>
+        row.isOff
+          ? { segmentErrors: [] as (string | null)[], hasErrors: false }
+          : validateShiftSegments(row.segments, row.employeeName),
+      ),
+    [rows],
+  );
+  const hasValidationErrors = rowValidations.some((validation) => validation.hasErrors);
+
   function updateRow(id: string, patch: Partial<RowState>) {
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, ...patch } : row)),
@@ -123,7 +134,7 @@ export function DailyScheduleEditor({
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        {rows.map((row) => (
+        {rows.map((row, rowIndex) => (
           <div
             key={row.id}
             className="space-y-2 border-b border-border/70 px-3 py-3 last:border-b-0 sm:px-4"
@@ -178,69 +189,28 @@ export function DailyScheduleEditor({
             </div>
 
             {!row.isOff ? (
-              <div className="space-y-1.5">
-                {row.segments.map((segment, index) => (
-                  <div
-                    key={`${row.id}-${index}`}
-                    className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-1.5"
-                  >
-                    <input
-                      form="daily-save-form"
-                      type="time"
-                      step={TIME_INPUT_STEP_SECONDS}
-                      name={`seg_${row.id}_${index}_in`}
-                      value={segment.timeIn}
-                      onChange={(event) =>
-                        updateSegment(row.id, index, "timeIn", event.target.value)
-                      }
-                      className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-sm text-foreground"
-                    />
-                    <span className="text-xs text-muted">→</span>
-                    <input
-                      form="daily-save-form"
-                      type="time"
-                      step={TIME_INPUT_STEP_SECONDS}
-                      name={`seg_${row.id}_${index}_out`}
-                      value={segment.timeOut}
-                      onChange={(event) =>
-                        updateSegment(row.id, index, "timeOut", event.target.value)
-                      }
-                      className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-sm text-foreground"
-                    />
-                    {row.segments.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateRow(row.id, {
-                            segments: row.segments.filter((_, i) => i !== index),
-                          })
-                        }
-                        className="text-xs text-muted hover:text-red-300"
-                      >
-                        ✕
-                      </button>
-                    ) : (
-                      <span className="w-3" />
-                    )}
-                  </div>
-                ))}
-                {row.segments.length < MAX_SEGMENTS ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateRow(row.id, {
-                        segments: [
-                          ...row.segments,
-                          { timeIn: "17:30", timeOut: "22:30" },
-                        ],
-                      })
-                    }
-                    className="text-xs font-medium text-accent hover:underline"
-                  >
-                    + Add time
-                  </button>
-                ) : null}
-              </div>
+              <ShiftSegmentFields
+                fieldId={row.id}
+                formId="daily-save-form"
+                segments={row.segments}
+                validation={rowValidations[rowIndex]}
+                onSegmentChange={(index, field, value) =>
+                  updateSegment(row.id, index, field, value)
+                }
+                onRemoveSegment={(index) =>
+                  updateRow(row.id, {
+                    segments: row.segments.filter((_, i) => i !== index),
+                  })
+                }
+                onAddSegment={() =>
+                  updateRow(row.id, {
+                    segments: [
+                      ...row.segments,
+                      { timeIn: "17:30", timeOut: "22:30" },
+                    ],
+                  })
+                }
+              />
             ) : null}
           </div>
         ))}
@@ -337,12 +307,15 @@ export function DailyScheduleEditor({
         <button
           type="submit"
           form="daily-save-form"
-          disabled={pending}
+          disabled={pending || hasValidationErrors}
           className={saveButtonClassName}
         >
           {pending ? "Saving…" : "Save day"}
         </button>
         </div>
+        {hasValidationErrors ? (
+          <p className="text-xs text-red-300">Fix time errors before saving.</p>
+        ) : null}
       </div>
     </div>
   );

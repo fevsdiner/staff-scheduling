@@ -4,6 +4,8 @@ import { listEmployees } from "@/lib/employees/demo-store";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildSeedVersion } from "@/lib/templates/demo-store";
+import { getEmployeeById } from "@/lib/employees/demo-store";
+import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
 import type {
   TemplateSegment,
   TemplateShift,
@@ -272,10 +274,9 @@ export async function saveDayShifts(input: {
       throw new Error("Working shifts need at least one time segment.");
     }
 
-    for (const segment of segments) {
-      if (segment.timeIn >= segment.timeOut) {
-        throw new Error("Time-in must be before time-out.");
-      }
+    const employee = getEmployeeById(shift.employeeId);
+    if (!shift.isOff) {
+      assertValidShiftSegments(segments, employee?.name ?? "Employee");
     }
 
     return {
