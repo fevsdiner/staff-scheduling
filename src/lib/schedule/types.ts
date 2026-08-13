@@ -9,6 +9,7 @@ export interface ScheduleEntry {
   id: string;
   name: string;
   isOff: boolean;
+  isSwapOff: boolean;
   isPartTime: boolean;
   segments: ScheduleSegment[];
   source: "template" | "manual";

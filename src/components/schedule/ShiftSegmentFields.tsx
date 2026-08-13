@@ -20,6 +20,7 @@ interface ShiftSegmentFieldsProps {
   onRemoveSegment: (index: number) => void;
   onAddSegment: () => void;
   addLabel?: string;
+  highlightAll?: boolean;
 }
 
 export function ShiftSegmentFields({
@@ -31,6 +32,7 @@ export function ShiftSegmentFields({
   onRemoveSegment,
   onAddSegment,
   addLabel = "+ Add time",
+  highlightAll = false,
 }: ShiftSegmentFieldsProps) {
   return (
     <div className="space-y-1.5">
@@ -55,11 +57,13 @@ export function ShiftSegmentFields({
                   onSegmentChange(index, "timeIn", event.target.value)
                 }
                 className={
-                  segmentValidation.timeInError
+                  segmentValidation.timeInError || highlightAll
                     ? inputInvalidClassName
                     : inputValidClassName
                 }
-                aria-invalid={segmentValidation.timeInError ? true : undefined}
+                aria-invalid={
+                  segmentValidation.timeInError || highlightAll ? true : undefined
+                }
               />
               <span className="text-xs text-muted">→</span>
               <input
@@ -72,11 +76,13 @@ export function ShiftSegmentFields({
                   onSegmentChange(index, "timeOut", event.target.value)
                 }
                 className={
-                  segmentValidation.timeOutError
+                  segmentValidation.timeOutError || highlightAll
                     ? inputInvalidClassName
                     : inputValidClassName
                 }
-                aria-invalid={segmentValidation.timeOutError ? true : undefined}
+                aria-invalid={
+                  segmentValidation.timeOutError || highlightAll ? true : undefined
+                }
               />
               {segments.length > 1 ? (
                 <button

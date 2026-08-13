@@ -221,6 +221,7 @@ function groupRows(rows: DemoRow[], date: string, teamFilter: string): DaySchedu
       id: row.id,
       name: row.name,
       isOff: row.isOff,
+      isSwapOff: false,
       isPartTime: row.isPartTime,
       segments: row.segments,
       source: row.source,

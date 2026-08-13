@@ -7,6 +7,7 @@ import {
   updateEmployeeAction,
   type EmployeeActionState,
 } from "@/lib/employees/actions";
+import { formatBirthdayDisplay } from "@/lib/employees/birthday";
 import {
   EMPLOYMENT_TYPE_OPTIONS,
   TEAM_OPTIONS,
@@ -36,7 +37,7 @@ export function EmployeeRow({ employee }: EmployeeRowProps) {
   if (!editing) {
     return (
       <div
-        className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_auto] sm:px-4 ${
+        className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_7.5rem_auto] sm:px-4 ${
           employee.active ? "" : "opacity-55"
         }`}
       >
@@ -46,12 +47,18 @@ export function EmployeeRow({ employee }: EmployeeRowProps) {
           </p>
           <p className="text-xs text-muted sm:hidden">
             {employee.teamName} · {employmentTypeLabel(employee.employmentType)}
+            {employee.birthday
+              ? ` · ${formatBirthdayDisplay(employee.birthday)}`
+              : ""}
           </p>
         </div>
 
         <p className="hidden text-sm text-muted sm:block">{employee.teamName}</p>
         <p className="hidden text-sm text-muted sm:block">
           {employmentTypeLabel(employee.employmentType)}
+        </p>
+        <p className="hidden text-sm tabular-nums text-muted sm:block">
+          {formatBirthdayDisplay(employee.birthday)}
         </p>
 
         <div className="flex items-center gap-1.5">
@@ -77,6 +84,11 @@ export function EmployeeRow({ employee }: EmployeeRowProps) {
               value={employee.employmentType}
             />
             <input type="hidden" name="active" value={String(employee.active)} />
+            <input
+              type="hidden"
+              name="birthday"
+              value={employee.birthday ?? ""}
+            />
             <button
               type="submit"
               className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-raised hover:text-foreground"
@@ -95,8 +107,9 @@ export function EmployeeRow({ employee }: EmployeeRowProps) {
       className="space-y-2 border-b border-border/70 bg-surface-raised/40 px-3 py-3 last:border-b-0 sm:px-4"
     >
       <input type="hidden" name="id" value={employee.id} />
+      <input type="hidden" name="previousName" value={employee.name} />
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_7rem]">
+      <div className="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_8rem_7rem]">
         <label className="flex flex-col gap-1">
           <span className="text-xs text-muted">Name</span>
           <input
@@ -138,6 +151,20 @@ export function EmployeeRow({ employee }: EmployeeRowProps) {
         </label>
 
         <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted">Birthday</span>
+          <input
+            name="birthday"
+            placeholder="MM/DD/YYYY"
+            defaultValue={
+              employee.birthday ? formatBirthdayDisplay(employee.birthday) : ""
+            }
+            inputMode="numeric"
+            autoComplete="bday"
+            className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none focus:border-accent"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
           <span className="text-xs text-muted">Status</span>
           <select
             name="active"
@@ -168,6 +195,13 @@ export function EmployeeRow({ employee }: EmployeeRowProps) {
         {state.error ? <p className="text-xs text-red-300">{state.error}</p> : null}
         {state.success ? (
           <p className="text-xs text-accent">{state.success}</p>
+        ) : null}
+        {state.sheetsNotice ? (
+          <p
+            className={`text-xs ${state.sheetsNotice.type === "success" ? "text-accent" : "text-red-300"}`}
+          >
+            {state.sheetsNotice.message}
+          </p>
         ) : null}
       </div>
     </form>

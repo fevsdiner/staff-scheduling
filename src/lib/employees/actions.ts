@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { requireRole } from "@/lib/auth/guards";
-import { createEmployee, updateEmployee } from "@/lib/employees/demo-store";
+import {
+  createEmployee,
+  updateEmployee,
+} from "@/lib/employees/store";
+import { parseBirthdayInput } from "@/lib/employees/birthday";
 import { teamById, type EmploymentType } from "@/lib/employees/types";
 
 function parseEmploymentType(value: string): EmploymentType {
@@ -13,7 +17,19 @@ function parseEmploymentType(value: string): EmploymentType {
 export type EmployeeActionState = {
   error?: string;
   success?: string;
+  sheetsNotice?: {
+    type: "success" | "error";
+    message: string;
+  };
 };
+
+function revalidateScheduleViews(): void {
+  revalidatePath("/admin/employees");
+  revalidatePath("/admin/daily");
+  revalidatePath("/admin/schedule");
+  revalidatePath("/admin/template");
+  revalidatePath("/");
+}
 
 export async function createEmployeeAction(
   _prev: EmployeeActionState,
@@ -32,8 +48,9 @@ export async function createEmployeeAction(
   }
 
   try {
-    createEmployee({ name, teamId, employmentType });
-    revalidatePath("/admin/employees");
+    const birthday = parseBirthdayInput(String(formData.get("birthday") ?? ""));
+    await createEmployee({ name, teamId, employmentType, birthday });
+    revalidateScheduleViews();
     return { success: "Employee added." };
   } catch (error) {
     return {
@@ -64,9 +81,43 @@ export async function updateEmployeeAction(
   }
 
   try {
-    updateEmployee(id, { name, teamId, employmentType, active });
-    revalidatePath("/admin/employees");
-    return { success: "Employee updated." };
+    const previousName = String(formData.get("previousName") ?? "");
+    const birthday = parseBirthdayInput(String(formData.get("birthday") ?? ""));
+    const { sheetsSync } = await updateEmployee(id, {
+      name,
+      teamId,
+      employmentType,
+      birthday,
+      active,
+    });
+    revalidateScheduleViews();
+
+    const renamed = previousName.trim() !== "" && previousName.trim() !== name.trim();
+    let sheetsNotice: EmployeeActionState["sheetsNotice"];
+    if (renamed) {
+      if (sheetsSync?.status === "success") {
+        sheetsNotice = {
+          type: "success",
+          message: "Saved schedules and Google Sheets were updated with the new name.",
+        };
+      } else if (sheetsSync?.status === "failed") {
+        sheetsNotice = {
+          type: "error",
+          message:
+            "Name saved in the app, but Google Sheets could not be updated. Try Save Day or run sheets sync.",
+        };
+      } else if (renamed) {
+        sheetsNotice = {
+          type: "success",
+          message: "Name updated everywhere in the app.",
+        };
+      }
+    }
+
+    return {
+      success: "Employee updated.",
+      sheetsNotice,
+    };
   } catch (error) {
     return {
       error:
@@ -85,7 +136,8 @@ export async function toggleEmployeeActiveAction(formData: FormData): Promise<vo
     String(formData.get("employmentType") ?? "regular"),
   );
   const active = String(formData.get("active") ?? "true") !== "true";
+  const birthday = parseBirthdayInput(String(formData.get("birthday") ?? ""));
 
-  updateEmployee(id, { name, teamId, employmentType, active });
-  revalidatePath("/admin/employees");
+  await updateEmployee(id, { name, teamId, employmentType, birthday, active });
+  revalidateScheduleViews();
 }

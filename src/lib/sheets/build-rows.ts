@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 
-import { getOrCreateDailyEntries } from "@/lib/daily/store";
+import { listDailyEntriesForDate } from "@/lib/daily/store";
 import type { DailyEntry } from "@/lib/daily/types";
 import { sortDailyEntries } from "@/lib/daily/sort";
 import { TEAM_OPTIONS, teamById } from "@/lib/employees/types";
@@ -15,9 +15,14 @@ export const SHEET_HEADER = [
   "TIME-OUT (1)",
   "TIME-IN (2)",
   "TIME-OUT (2)",
+  "Swap Off",
 ] as const;
 
 const TEAM_SORT_ORDER = new Map(TEAM_OPTIONS.map((team, index) => [team.name, index]));
+
+function swapOffCell(entry: DailyEntry): string {
+  return entry.isSwapOff ? "/" : "";
+}
 
 function entryToRow(date: string, dayName: string, entry: DailyEntry): string[] {
   const team = teamById(entry.teamId);
@@ -34,6 +39,7 @@ function entryToRow(date: string, dayName: string, entry: DailyEntry): string[] 
       "-",
       "-",
       "-",
+      swapOffCell(entry),
     ];
   }
 
@@ -49,6 +55,7 @@ function entryToRow(date: string, dayName: string, entry: DailyEntry): string[] 
     seg0?.timeOut ?? "-",
     seg1?.timeIn ?? "-",
     seg1?.timeOut ?? "-",
+    swapOffCell(entry),
   ];
 }
 
@@ -64,7 +71,8 @@ export async function buildDataRowsForDate(
   for (const team of TEAM_OPTIONS) {
     if (!allowedTeamIds.has(team.id)) continue;
 
-    const teamEntries = sortDailyEntries(await getOrCreateDailyEntries(team.id, date));
+    const allEntries = await listDailyEntriesForDate(date, team.id);
+    const teamEntries = sortDailyEntries(allEntries);
     for (const entry of teamEntries) {
       rows.push(entryToRow(date, dayName, entry));
     }

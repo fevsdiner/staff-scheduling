@@ -12,6 +12,7 @@ export interface DailyEntry {
   partTimeName: string | null;
   isPartTime: boolean;
   isOff: boolean;
+  isSwapOff: boolean;
   source: "template" | "manual";
   segments: DailySegment[];
   updatedAt: string;

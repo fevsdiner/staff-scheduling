@@ -56,7 +56,7 @@ export async function pushScheduleDateToSheets(
   const teamNames = teamIds
     .map((teamId) => teamById(teamId)?.name)
     .filter((name): name is string => Boolean(name));
-  const range = `${tabName}!A:I`;
+  const range = `${tabName}!A:J`;
 
   const existingResponse = await sheets.spreadsheets.values.get({
     spreadsheetId,

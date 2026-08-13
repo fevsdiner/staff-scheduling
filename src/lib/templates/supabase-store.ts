@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
 
-import { listEmployees } from "@/lib/employees/demo-store";
+import { getEmployeeById, listEmployees } from "@/lib/employees/store";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildSeedVersion } from "@/lib/templates/demo-store";
-import { getEmployeeById } from "@/lib/employees/demo-store";
 import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
 import type {
   TemplateSegment,
@@ -197,7 +196,7 @@ export async function createTemplateVersion(input: {
     shifts = buildSeedVersion(input.teamId, label).shifts;
   }
 
-  const activeEmployees = listEmployees().filter(
+  const activeEmployees = (await listEmployees()).filter(
     (employee) =>
       employee.teamId === input.teamId &&
       employee.active &&
@@ -259,7 +258,8 @@ export async function saveDayShifts(input: {
 
   if (deleteError) throw new Error(deleteError.message);
 
-  const dayShifts: TemplateShift[] = input.shifts.map((shift) => {
+  const dayShifts: TemplateShift[] = [];
+  for (const shift of input.shifts) {
     const segments = shift.isOff
       ? []
       : shift.segments
@@ -274,19 +274,19 @@ export async function saveDayShifts(input: {
       throw new Error("Working shifts need at least one time segment.");
     }
 
-    const employee = getEmployeeById(shift.employeeId);
+    const employee = await getEmployeeById(shift.employeeId);
     if (!shift.isOff) {
       assertValidShiftSegments(segments, employee?.name ?? "Employee");
     }
 
-    return {
+    dayShifts.push({
       id: randomUUID(),
       employeeId: shift.employeeId,
       dayOfWeek: input.dayOfWeek,
       isOff: shift.isOff,
       segments,
-    };
-  });
+    });
+  }
 
   for (const shift of dayShifts) {
     const { error: shiftError } = await supabase.from("weekly_template_shifts").insert({

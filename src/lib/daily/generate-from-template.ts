@@ -1,6 +1,6 @@
 import { stableDailyEntryId } from "@/lib/daily/entry-id";
 import { dayOfWeekFromDateString } from "@/lib/schedule/datetime";
-import { listEmployees } from "@/lib/employees/demo-store";
+import { listEmployees } from "@/lib/employees/store";
 import { teamById } from "@/lib/employees/types";
 import {
   getShiftsForDay,
@@ -18,7 +18,7 @@ export async function generateDailyEntriesFromTemplate(
 
   const template = await getTemplateVersionForDate(teamId, date);
   const dayOfWeek = dayOfWeekFromDateString(date);
-  const employees = listEmployees().filter(
+  const employees = (await listEmployees()).filter(
     (employee) =>
       employee.teamId === teamId &&
       employee.active &&
@@ -36,6 +36,7 @@ export async function generateDailyEntriesFromTemplate(
       partTimeName: null,
       isPartTime: false,
       isOff: true,
+      isSwapOff: false,
       source: "template" as const,
       segments: [],
       updatedAt: now,
@@ -54,6 +55,7 @@ export async function generateDailyEntriesFromTemplate(
       partTimeName: null,
       isPartTime: false,
       isOff: shift?.isOff ?? true,
+      isSwapOff: false,
       source: "template" as const,
       segments: shift && !shift.isOff ? shift.segments.map((segment) => ({ ...segment })) : [],
       updatedAt: now,

@@ -15,6 +15,7 @@ type SaveInput = {
     partTimeName: string | null;
     isPartTime: boolean;
     isOff: boolean;
+    isSwapOff?: boolean;
     segments: DailySegment[];
     source?: "template" | "manual";
   }>;

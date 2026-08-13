@@ -32,6 +32,7 @@ async function getLocalSchedule(date: string, teamFilter: string): Promise<DaySc
       id: entry.id,
       name: formatEmployeeDisplayName(entry.employeeName, entry.isPartTime),
       isOff: entry.isOff,
+      isSwapOff: entry.isSwapOff ?? false,
       isPartTime: entry.isPartTime,
       segments: entry.segments,
       source: entry.source,

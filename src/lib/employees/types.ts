@@ -15,6 +15,7 @@ export interface Employee {
   teamSlug: TeamSlug;
   teamName: string;
   employmentType: EmploymentType;
+  birthday: string | null;
   active: boolean;
   createdAt: string;
 }

@@ -9,7 +9,10 @@
     "lint": "eslint",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "db:import-local": "node scripts/import-local-daily-to-supabase.mjs",
+    "sheets:sync": "node scripts/sync-sheets-from-supabase.mjs",
+    "employee:rename": "node scripts/rename-employee.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",

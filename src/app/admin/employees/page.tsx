@@ -2,7 +2,7 @@ import { AdminBackLink } from "@/components/admin/AdminBackLink";
 import { AddEmployeeForm } from "@/components/employees/AddEmployeeForm";
 import { EmployeeRow } from "@/components/employees/EmployeeRow";
 import { requireRole } from "@/lib/auth/guards";
-import { listEmployees } from "@/lib/employees/demo-store";
+import { listEmployees } from "@/lib/employees/store";
 import { TEAM_OPTIONS } from "@/lib/employees/types";
 
 interface EmployeesPageProps {
@@ -15,13 +15,13 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
   const teamFilter = params.team ?? "all";
   const showInactive = params.show === "inactive";
 
-  const employees = listEmployees().filter((employee) => {
+  const employees = (await listEmployees()).filter((employee) => {
     if (!showInactive && !employee.active) return false;
     if (teamFilter !== "all" && employee.teamSlug !== teamFilter) return false;
     return true;
   });
 
-  const activeCount = listEmployees().filter((employee) => employee.active).length;
+  const activeCount = (await listEmployees()).filter((employee) => employee.active).length;
 
   return (
     <div className="space-y-4">

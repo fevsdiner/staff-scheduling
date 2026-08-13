@@ -12,6 +12,11 @@ export function ScheduleEntryRow({ entry }: ScheduleEntryRowProps) {
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 border-b border-border/70 px-3 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)_1rem] sm:gap-x-3 sm:px-4">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-foreground">{entry.name}</p>
+        {entry.isSwapOff ? (
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+            Swap Off
+          </p>
+        ) : null}
       </div>
 
       <div className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1">

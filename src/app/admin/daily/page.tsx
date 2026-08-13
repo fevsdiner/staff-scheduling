@@ -4,7 +4,7 @@ import { DailyScheduleEditor } from "@/components/daily/DailyScheduleEditor";
 import { accessibleTeams } from "@/lib/auth/teams";
 import { requireUser } from "@/lib/auth/guards";
 import { getOrCreateDailyEntries } from "@/lib/daily/store";
-import { listPartTimeEmployees } from "@/lib/employees/demo-store";
+import { listEmployees, listPartTimeEmployees } from "@/lib/employees/store";
 import { teamBySlug, type TeamSlug } from "@/lib/employees/types";
 import {
   formatDisplayDate,
@@ -41,8 +41,11 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
   const scheduledEmployeeIds = new Set(
     entries.map((entry) => entry.employeeId).filter(Boolean),
   );
-  const availablePartTime = listPartTimeEmployees(selectedTeam.id).filter(
+  const availablePartTime = (await listPartTimeEmployees(selectedTeam.id)).filter(
     (employee) => !scheduledEmployeeIds.has(employee.id),
+  );
+  const birthdayByEmployeeId = Object.fromEntries(
+    (await listEmployees()).map((employee) => [employee.id, employee.birthday]),
   );
 
   return (
@@ -82,6 +85,7 @@ export default async function DailyPage({ searchParams }: DailyPageProps) {
         date={selectedDate}
         entries={entries}
         availablePartTime={availablePartTime}
+        birthdayByEmployeeId={birthdayByEmployeeId}
       />
     </div>
   );

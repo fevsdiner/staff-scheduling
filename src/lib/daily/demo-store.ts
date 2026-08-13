@@ -81,6 +81,7 @@ export function generateFromTemplate(teamId: string, date: string): DailyEntry[]
       partTimeName: null,
       isPartTime: false,
       isOff: true,
+      isSwapOff: false,
       source: "template" as const,
       segments: [],
       updatedAt: now,
@@ -99,11 +100,23 @@ export function generateFromTemplate(teamId: string, date: string): DailyEntry[]
       partTimeName: null,
       isPartTime: false,
       isOff: shift?.isOff ?? true,
+      isSwapOff: false,
       source: "template" as const,
       segments: shift && !shift.isOff ? shift.segments.map((s) => ({ ...s })) : [],
       updatedAt: now,
     };
   });
+}
+
+function withCurrentEmployeeName(entry: DailyEntry): DailyEntry {
+  const normalized: DailyEntry = {
+    ...entry,
+    isSwapOff: entry.isSwapOff ?? false,
+  };
+  if (!normalized.employeeId) return normalized;
+  const employee = getEmployeeById(normalized.employeeId);
+  if (!employee) return normalized;
+  return { ...normalized, employeeName: employee.name };
 }
 
 /** Returns daily entries for team+date, generating from template if missing. */
@@ -116,7 +129,7 @@ export function getOrCreateDailyEntries(
     (entry) => entry.scheduleDate === date && entry.teamId === teamId,
   );
   if (existing.length > 0) {
-    return sortDailyEntries(existing);
+    return sortDailyEntries(existing.map(withCurrentEmployeeName));
   }
 
   const generated = generateFromTemplate(teamId, date);
@@ -128,12 +141,37 @@ export function getOrCreateDailyEntries(
 export function listDailyEntriesForDate(date: string, teamId?: string): DailyEntry[] {
   const store = ensureStore();
   return sortDailyEntries(
-    store.entries.filter((entry) => {
-      if (entry.scheduleDate !== date) return false;
-      if (teamId && entry.teamId !== teamId) return false;
-      return true;
-    }),
+    store.entries
+      .filter((entry) => {
+        if (entry.scheduleDate !== date) return false;
+        if (teamId && entry.teamId !== teamId) return false;
+        return true;
+      })
+      .map(withCurrentEmployeeName),
   );
+}
+
+export function patchDailyScheduleEmployeeName(
+  employeeId: string,
+  newName: string,
+): string[] {
+  const store = ensureStore();
+  const dates = new Set<string>();
+  let changed = false;
+
+  for (const entry of store.entries) {
+    if (entry.employeeId === employeeId) {
+      entry.employeeName = newName;
+      dates.add(entry.scheduleDate);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveStore(store);
+  }
+
+  return [...dates].sort();
 }
 
 /** Ensure all teams have generated rows for a date (for public view). */
@@ -154,6 +192,7 @@ export function saveDailyEntries(input: {
     partTimeName: string | null;
     isPartTime: boolean;
     isOff: boolean;
+    isSwapOff?: boolean;
     segments: DailySegment[];
     source?: "template" | "manual";
   }>;
@@ -165,16 +204,18 @@ export function saveDailyEntries(input: {
   );
 
   const saved: DailyEntry[] = input.entries.map((entry) => {
-    const segments = entry.isOff
+    const isOff = entry.isOff;
+    const isSwapOff = isOff ? false : Boolean(entry.isSwapOff);
+    const segments = isOff
       ? []
       : entry.segments
           .filter((segment) => segment.timeIn && segment.timeOut)
           .slice(0, 3);
 
-    if (!entry.isOff && segments.length === 0) {
+    if (!isOff && segments.length === 0) {
       throw new Error(`${entry.employeeName}: working shifts need a time segment.`);
     }
-    if (!entry.isOff) {
+    if (!isOff) {
       assertValidShiftSegments(segments, entry.employeeName);
     }
 
@@ -186,7 +227,8 @@ export function saveDailyEntries(input: {
       employeeName: entry.employeeName,
       partTimeName: entry.partTimeName,
       isPartTime: entry.isPartTime,
-      isOff: entry.isOff,
+      isOff,
+      isSwapOff,
       source: entry.source ?? "manual",
       segments,
       updatedAt: now,
@@ -245,6 +287,7 @@ export function addPartTimeEntry(input: {
     partTimeName: null,
     isPartTime: true,
     isOff: false,
+    isSwapOff: false,
     source: "manual",
     segments: [{ timeIn: "09:00", timeOut: "17:00" }],
     updatedAt: new Date().toISOString(),

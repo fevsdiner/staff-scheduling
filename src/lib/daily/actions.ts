@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth/guards";
 import type { AuthUser } from "@/lib/auth/types";
-import { getEmployeeById } from "@/lib/employees/demo-store";
+import { getEmployeeById } from "@/lib/employees/store";
 import {
   addPartTimeEntry,
   getOrCreateDailyEntries,
@@ -52,13 +52,15 @@ export async function saveDailyDayAction(
   const existing = await getOrCreateDailyEntries(teamId, date);
 
   try {
-    const entries = entryIds.map((entryId) => {
+    const entries = [];
+    for (const entryId of entryIds) {
       const current = existing.find((entry) => entry.id === entryId);
       if (!current) {
         throw new Error("Schedule entry not found.");
       }
 
       const isOff = formData.get(`off_${entryId}`) === "on";
+      const isSwapOff = !isOff && formData.get(`swapOff_${entryId}`) === "on";
       const segmentCount = Number(formData.get(`segmentCount_${entryId}`) ?? 0);
       const segments: DailySegment[] = [];
       for (let i = 0; i < segmentCount; i += 1) {
@@ -69,21 +71,27 @@ export async function saveDailyDayAction(
 
       const changed =
         current.isOff !== isOff ||
+        current.isSwapOff !== isSwapOff ||
         JSON.stringify(current.segments) !== JSON.stringify(segments);
 
-      return {
+      const rosterEmployee = current.employeeId
+        ? await getEmployeeById(current.employeeId)
+        : undefined;
+
+      entries.push({
         id: current.id,
         employeeId: current.employeeId,
-        employeeName: current.employeeName,
+        employeeName: rosterEmployee?.name ?? current.employeeName,
         partTimeName: current.partTimeName,
         isPartTime: current.isPartTime,
         isOff,
+        isSwapOff,
         segments,
         source: (changed || current.source === "manual"
           ? "manual"
           : "template") as "template" | "manual",
-      };
-    });
+      });
+    }
 
     await saveDailyEntries({ teamId, date, entries });
     revalidatePath("/admin/daily");
@@ -136,7 +144,7 @@ export async function addPartTimeAction(
 
   try {
     assertTeamAccess(user, teamId);
-    const employee = getEmployeeById(employeeId);
+    const employee = await getEmployeeById(employeeId);
     await addPartTimeEntry({
       teamId,
       date,

@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { generateDailyEntriesFromTemplate } from "@/lib/daily/generate-from-template";
 import { sortDailyEntries } from "@/lib/daily/sort";
 import type { DailyEntry, DailySegment } from "@/lib/daily/types";
-import { getEmployeeById } from "@/lib/employees/demo-store";
+import { getEmployeeById } from "@/lib/employees/store";
 import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -16,6 +16,7 @@ const ENTRY_SELECT = `
   part_time_name,
   is_part_time,
   is_off,
+  is_swap_off,
   source,
   updated_at,
   employee:employees(name),
@@ -30,6 +31,7 @@ interface ScheduleRow {
   part_time_name: string | null;
   is_part_time: boolean;
   is_off: boolean;
+  is_swap_off: boolean | null;
   source: "template" | "manual";
   updated_at: string;
   employee: { name: string } | { name: string }[] | null;
@@ -62,6 +64,7 @@ function mapRow(row: ScheduleRow): DailyEntry {
     partTimeName: row.part_time_name,
     isPartTime: row.is_part_time,
     isOff: row.is_off,
+    isSwapOff: Boolean(row.is_swap_off),
     source: row.source,
     segments,
     updatedAt: row.updated_at,
@@ -109,6 +112,7 @@ async function insertEntries(entries: DailyEntry[]): Promise<void> {
       part_time_name: entry.partTimeName,
       is_part_time: entry.isPartTime,
       is_off: entry.isOff,
+      is_swap_off: entry.isSwapOff,
       source: entry.source,
       updated_at: entry.updatedAt,
     });
@@ -144,6 +148,7 @@ function buildValidatedEntries(input: {
     partTimeName: string | null;
     isPartTime: boolean;
     isOff: boolean;
+    isSwapOff?: boolean;
     segments: DailySegment[];
     source?: "template" | "manual";
   }>;
@@ -151,16 +156,18 @@ function buildValidatedEntries(input: {
   const now = new Date().toISOString();
 
   return input.entries.map((entry) => {
-    const segments = entry.isOff
+    const isOff = entry.isOff;
+    const isSwapOff = isOff ? false : Boolean(entry.isSwapOff);
+    const segments = isOff
       ? []
       : entry.segments
           .filter((segment) => segment.timeIn && segment.timeOut)
           .slice(0, 3);
 
-    if (!entry.isOff && segments.length === 0) {
+    if (!isOff && segments.length === 0) {
       throw new Error(`${entry.employeeName}: working shifts need a time segment.`);
     }
-    if (!entry.isOff) {
+    if (!isOff) {
       assertValidShiftSegments(segments, entry.employeeName);
     }
 
@@ -172,7 +179,8 @@ function buildValidatedEntries(input: {
       employeeName: entry.employeeName,
       partTimeName: entry.partTimeName,
       isPartTime: entry.isPartTime,
-      isOff: entry.isOff,
+      isOff,
+      isSwapOff,
       source: entry.source ?? "manual",
       segments,
       updatedAt: now,
@@ -241,6 +249,7 @@ export async function saveDailyEntries(input: {
     partTimeName: string | null;
     isPartTime: boolean;
     isOff: boolean;
+    isSwapOff?: boolean;
     segments: DailySegment[];
     source?: "template" | "manual";
   }>;
@@ -264,7 +273,7 @@ export async function addPartTimeEntry(input: {
   date: string;
   employeeId: string;
 }): Promise<DailyEntry> {
-  const employee = getEmployeeById(input.employeeId);
+  const employee = await getEmployeeById(input.employeeId);
   if (!employee || !employee.active) {
     throw new Error("Employee not found.");
   }
@@ -307,6 +316,7 @@ export async function addPartTimeEntry(input: {
     partTimeName: null,
     isPartTime: true,
     isOff: false,
+    isSwapOff: false,
     source: "manual",
     segments: [{ timeIn: "09:00", timeOut: "17:00" }],
     updatedAt: new Date().toISOString(),

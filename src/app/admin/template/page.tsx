@@ -11,7 +11,7 @@ import {
   listTemplateVersions,
 } from "@/lib/templates/store";
 import { DAYS_OF_WEEK } from "@/lib/templates/types";
-import { listEmployees } from "@/lib/employees/demo-store";
+import { listEmployees } from "@/lib/employees/store";
 import { teamBySlug, type TeamSlug } from "@/lib/employees/types";
 
 interface TemplatePageProps {
@@ -58,7 +58,7 @@ export default async function TemplatePage({ searchParams }: TemplatePageProps) 
   const dayOfWeek = Number.isFinite(dayParam) && dayParam >= 0 && dayParam <= 6 ? dayParam : 1;
   const dayMeta = DAYS_OF_WEEK[dayOfWeek];
 
-  const employees = listEmployees().filter(
+  const employees = (await listEmployees()).filter(
     (employee) =>
       employee.teamId === selectedTeam.id &&
       employee.active &&

@@ -20,7 +20,7 @@ export function AddEmployeeForm() {
     <form action={formAction} className="space-y-3 rounded-xl border border-border bg-surface p-3">
       <h2 className="text-sm font-semibold text-foreground">Add employee</h2>
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]">
+      <div className="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_8rem_auto]">
         <label className="flex flex-col gap-1">
           <span className="text-xs text-muted">Name</span>
           <input
@@ -61,6 +61,17 @@ export function AddEmployeeForm() {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted">Birthday</span>
+          <input
+            name="birthday"
+            placeholder="MM/DD/YYYY"
+            inputMode="numeric"
+            autoComplete="bday"
+            className="h-10 rounded-lg border border-border bg-surface-raised px-3 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          />
         </label>
 
         <div className="flex items-end">

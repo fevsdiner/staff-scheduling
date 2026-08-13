@@ -14,6 +14,7 @@ type SeedEmployee = {
   active: boolean;
   createdAt: string;
   employmentType?: EmploymentType;
+  birthday?: string | null;
 };
 
 const KITCHEN = TEAM_OPTIONS[0].id;
@@ -53,6 +54,7 @@ function hydrate(row: SeedEmployee): Employee {
     teamSlug: team.slug,
     teamName: team.name,
     employmentType: row.employmentType ?? "regular",
+    birthday: row.birthday ?? null,
   };
 }
 
@@ -90,11 +92,12 @@ function saveStore(employees: Employee[]): void {
     return;
   }
   const compact = employees.map(
-    ({ id, name, teamId, employmentType, active, createdAt }) => ({
+    ({ id, name, teamId, employmentType, birthday, active, createdAt }) => ({
       id,
       name,
       teamId,
       employmentType,
+      birthday,
       active,
       createdAt,
     }),
@@ -137,6 +140,7 @@ export function createEmployee(input: {
   name: string;
   teamId: string;
   employmentType?: EmploymentType;
+  birthday?: string | null;
 }): Employee {
   const team = teamById(input.teamId);
   if (!team) {
@@ -157,6 +161,7 @@ export function createEmployee(input: {
     name,
     teamId: team.id,
     employmentType: input.employmentType ?? "regular",
+    birthday: input.birthday ?? null,
     active: true,
     createdAt: new Date().toISOString(),
   });
@@ -171,6 +176,7 @@ export function updateEmployee(
     name: string;
     teamId: string;
     employmentType: EmploymentType;
+    birthday?: string | null;
     active: boolean;
   },
 ): Employee {
@@ -198,6 +204,7 @@ export function updateEmployee(
     name,
     teamId: team.id,
     employmentType: input.employmentType,
+    birthday: input.birthday ?? null,
     active: input.active,
     createdAt: employees[index].createdAt,
   });

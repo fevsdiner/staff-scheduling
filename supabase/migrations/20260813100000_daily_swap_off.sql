@@ -1,0 +1,2 @@
+ALTER TABLE daily_schedules
+  ADD COLUMN IF NOT EXISTS is_swap_off BOOLEAN NOT NULL DEFAULT false;

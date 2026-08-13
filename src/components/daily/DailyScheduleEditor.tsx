@@ -14,6 +14,7 @@ import { accentButtonClassName } from "@/components/admin/AdminBackLink";
 import { ShiftSegmentFields } from "@/components/schedule/ShiftSegmentFields";
 import type { DailyEntry } from "@/lib/daily/types";
 import { sortDailyEntries } from "@/lib/daily/sort";
+import { isBirthdayOnDate } from "@/lib/employees/birthday";
 import { formatEmployeeDisplayName } from "@/lib/employees/display";
 import type { Employee } from "@/lib/employees/types";
 import { validateShiftSegments } from "@/lib/schedule/validate-segments";
@@ -24,9 +25,11 @@ const saveButtonClassName = `${accentButtonClassName} disabled:opacity-60`;
 
 interface RowState {
   id: string;
+  employeeId: string | null;
   employeeName: string;
   isPartTime: boolean;
   isOff: boolean;
+  isSwapOff: boolean;
   source: "template" | "manual";
   segments: { timeIn: string; timeOut: string }[];
 }
@@ -34,9 +37,11 @@ interface RowState {
 function toRows(entries: DailyEntry[]): RowState[] {
   return sortDailyEntries(entries).map((entry) => ({
     id: entry.id,
+    employeeId: entry.employeeId,
     employeeName: entry.employeeName,
     isPartTime: entry.isPartTime,
     isOff: entry.isOff,
+    isSwapOff: entry.isSwapOff ?? false,
     source: entry.source,
     segments:
       !entry.isOff && entry.segments.length > 0
@@ -51,6 +56,7 @@ interface DailyScheduleEditorProps {
   date: string;
   entries: DailyEntry[];
   availablePartTime: Employee[];
+  birthdayByEmployeeId: Record<string, string | null>;
 }
 
 export function DailyScheduleEditor({
@@ -59,6 +65,7 @@ export function DailyScheduleEditor({
   date,
   entries,
   availablePartTime,
+  birthdayByEmployeeId,
 }: DailyScheduleEditorProps) {
   const router = useRouter();
   const [rows, setRows] = useState(() => toRows(entries));
@@ -91,6 +98,20 @@ export function DailyScheduleEditor({
     [rows],
   );
   const hasValidationErrors = rowValidations.some((validation) => validation.hasErrors);
+  const birthdayDutyRows = useMemo(
+    () =>
+      rows.filter(
+        (row) =>
+          !row.isOff &&
+          Boolean(row.employeeId) &&
+          isBirthdayOnDate(birthdayByEmployeeId[row.employeeId ?? ""] ?? null, date),
+      ),
+    [rows, birthdayByEmployeeId, date],
+  );
+  const birthdayDutyIds = useMemo(
+    () => new Set(birthdayDutyRows.map((row) => row.id)),
+    [birthdayDutyRows],
+  );
 
   function updateRow(id: string, patch: Partial<RowState>) {
     setRows((current) =>
@@ -176,12 +197,33 @@ export function DailyScheduleEditor({
                   <input
                     form="daily-save-form"
                     type="checkbox"
+                    name={`swapOff_${row.id}`}
+                    checked={row.isSwapOff}
+                    disabled={row.isOff}
+                    onChange={(event) =>
+                      updateRow(row.id, {
+                        isSwapOff: event.target.checked,
+                        isOff: event.target.checked ? false : row.isOff,
+                      })
+                    }
+                    className="rounded border-border disabled:opacity-40"
+                  />
+                  Swap Off
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-muted">
+                  <input
+                    form="daily-save-form"
+                    type="checkbox"
                     name={`off_${row.id}`}
                     checked={row.isOff}
+                    disabled={row.isSwapOff}
                     onChange={(event) =>
-                      updateRow(row.id, { isOff: event.target.checked })
+                      updateRow(row.id, {
+                        isOff: event.target.checked,
+                        isSwapOff: event.target.checked ? false : row.isSwapOff,
+                      })
                     }
-                    className="rounded border-border"
+                    className="rounded border-border disabled:opacity-40"
                   />
                   Off
                 </label>
@@ -189,28 +231,36 @@ export function DailyScheduleEditor({
             </div>
 
             {!row.isOff ? (
-              <ShiftSegmentFields
-                fieldId={row.id}
-                formId="daily-save-form"
-                segments={row.segments}
-                validation={rowValidations[rowIndex]}
-                onSegmentChange={(index, field, value) =>
-                  updateSegment(row.id, index, field, value)
-                }
-                onRemoveSegment={(index) =>
-                  updateRow(row.id, {
-                    segments: row.segments.filter((_, i) => i !== index),
-                  })
-                }
-                onAddSegment={() =>
-                  updateRow(row.id, {
-                    segments: [
-                      ...row.segments,
-                      { timeIn: "17:30", timeOut: "22:30" },
-                    ],
-                  })
-                }
-              />
+              <>
+                <ShiftSegmentFields
+                  fieldId={row.id}
+                  formId="daily-save-form"
+                  segments={row.segments}
+                  validation={rowValidations[rowIndex]}
+                  highlightAll={birthdayDutyIds.has(row.id)}
+                  onSegmentChange={(index, field, value) =>
+                    updateSegment(row.id, index, field, value)
+                  }
+                  onRemoveSegment={(index) =>
+                    updateRow(row.id, {
+                      segments: row.segments.filter((_, i) => i !== index),
+                    })
+                  }
+                  onAddSegment={() =>
+                    updateRow(row.id, {
+                      segments: [
+                        ...row.segments,
+                        { timeIn: "17:30", timeOut: "22:30" },
+                      ],
+                    })
+                  }
+                />
+                {birthdayDutyIds.has(row.id) ? (
+                  <p className="text-xs text-red-300" role="status">
+                    It&apos;s {row.employeeName}&apos;s birthday.
+                  </p>
+                ) : null}
+              </>
             ) : null}
           </div>
         ))}
@@ -310,6 +360,17 @@ export function DailyScheduleEditor({
             form="daily-save-form"
             disabled={pending || hasValidationErrors}
             className={saveButtonClassName}
+            onClick={(event) => {
+              if (hasValidationErrors || birthdayDutyRows.length === 0) return;
+              const names = birthdayDutyRows.map((row) => row.employeeName);
+              const who =
+                names.length === 1
+                  ? `${names[0]}'s birthday`
+                  : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}'s birthdays`;
+              if (!confirm(`It's ${who}. Save the schedule anyway?`)) {
+                event.preventDefault();
+              }
+            }}
           >
             {pending ? "Saving…" : "Save Day"}
           </button>
