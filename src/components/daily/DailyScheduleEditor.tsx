@@ -8,6 +8,7 @@ import {
   removePartTimeAction,
   resetDailyAction,
   saveDailyDayAction,
+  syncAllSheetsAction,
   type DailyActionState,
 } from "@/lib/daily/actions";
 import { accentButtonClassName } from "@/components/admin/AdminBackLink";
@@ -75,6 +76,10 @@ export function DailyScheduleEditor({
   );
   const [ptState, ptAction, ptPending] = useActionState(
     addPartTimeAction,
+    initialState,
+  );
+  const [syncState, syncAction, syncPending] = useActionState(
+    syncAllSheetsAction,
     initialState,
   );
 
@@ -332,52 +337,86 @@ export function DailyScheduleEditor({
             {state.sheetsNotice.message}
           </p>
         ) : null}
+        {syncState.success ? (
+          <p
+            className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-xs text-accent"
+            role="status"
+          >
+            {syncState.success}
+          </p>
+        ) : null}
+        {syncState.sheetsNotice ? (
+          <p
+            className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-xs text-green-300"
+            role="status"
+          >
+            {syncState.sheetsNotice.message}
+          </p>
+        ) : null}
+        {syncState.error ? (
+          <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+            {syncState.error}
+          </p>
+        ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-        <form action={resetDailyAction}>
-          <input type="hidden" name="teamId" value={teamId} />
-          <input type="hidden" name="date" value={date} />
-          <button
-            type="submit"
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-raised"
-            onClick={(event) => {
-              if (
-                !confirm(
-                  "Revert to the weekly template? Manual edits and part-timers for this day will be removed.",
-                )
-              ) {
-                event.preventDefault();
-              }
-            }}
-          >
-            Revert Template
-          </button>
-        </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <form action={resetDailyAction}>
+              <input type="hidden" name="teamId" value={teamId} />
+              <input type="hidden" name="date" value={date} />
+              <button
+                type="submit"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-raised"
+                onClick={(event) => {
+                  if (
+                    !confirm(
+                      "Revert to the weekly template? Manual edits and part-timers for this day will be removed.",
+                    )
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                Revert Template
+              </button>
+            </form>
 
-        <div className="flex flex-col items-end gap-1">
-          <button
-            type="submit"
-            form="daily-save-form"
-            disabled={pending || hasValidationErrors}
-            className={saveButtonClassName}
-            onClick={(event) => {
-              if (hasValidationErrors || birthdayDutyRows.length === 0) return;
-              const names = birthdayDutyRows.map((row) => row.employeeName);
-              const who =
-                names.length === 1
-                  ? `${names[0]}'s birthday`
-                  : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}'s birthdays`;
-              if (!confirm(`It's ${who}. Save the schedule anyway?`)) {
-                event.preventDefault();
-              }
-            }}
-          >
-            {pending ? "Saving…" : "Save Day"}
-          </button>
-          {hasValidationErrors ? (
-            <p className="text-xs text-red-300">Fix time errors before saving.</p>
-          ) : null}
-        </div>
+            <form action={syncAction}>
+              <button
+                type="submit"
+                disabled={syncPending || pending}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-raised disabled:opacity-60"
+                title="Push every saved schedule date to Google Sheets"
+              >
+                {syncPending ? "Syncing…" : "Sync all to Sheets"}
+              </button>
+            </form>
+          </div>
+
+          <div className="flex flex-col items-end gap-1">
+            <button
+              type="submit"
+              form="daily-save-form"
+              disabled={pending || syncPending || hasValidationErrors}
+              className={saveButtonClassName}
+              onClick={(event) => {
+                if (hasValidationErrors || birthdayDutyRows.length === 0) return;
+                const names = birthdayDutyRows.map((row) => row.employeeName);
+                const who =
+                  names.length === 1
+                    ? `${names[0]}'s birthday`
+                    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}'s birthdays`;
+                if (!confirm(`It's ${who}. Save the schedule anyway?`)) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              {pending ? "Saving…" : "Save Day"}
+            </button>
+            {hasValidationErrors ? (
+              <p className="text-xs text-red-300">Fix time errors before saving.</p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

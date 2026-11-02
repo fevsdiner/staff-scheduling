@@ -151,6 +151,12 @@ export function listDailyEntriesForDate(date: string, teamId?: string): DailyEnt
   );
 }
 
+/** Distinct schedule dates that already have saved daily rows. */
+export function listSavedScheduleDates(): string[] {
+  const store = ensureStore();
+  return [...new Set(store.entries.map((entry) => entry.scheduleDate))].sort();
+}
+
 export function patchDailyScheduleEmployeeName(
   employeeId: string,
   newName: string,

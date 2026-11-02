@@ -239,6 +239,14 @@ export async function listDailyEntriesForDate(
   return sortDailyEntries((data ?? []).map((row) => mapRow(row as ScheduleRow)));
 }
 
+/** Distinct schedule dates that already have saved daily rows. */
+export async function listSavedScheduleDates(): Promise<string[]> {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase.from("daily_schedules").select("schedule_date");
+  if (error) throw new Error(error.message);
+  return [...new Set((data ?? []).map((row) => row.schedule_date as string))].sort();
+}
+
 export async function saveDailyEntries(input: {
   teamId: string;
   date: string;
