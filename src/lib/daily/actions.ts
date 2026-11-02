@@ -14,7 +14,11 @@ import {
 } from "@/lib/daily/store";
 import type { DailySegment } from "@/lib/daily/types";
 import { teamById, teamBySlug, type TeamSlug } from "@/lib/employees/types";
-import { tryPushScheduleToSheets } from "@/lib/sheets/actions";
+import {
+  tryPushAllSavedSchedulesToSheets,
+  tryPushScheduleToSheets,
+} from "@/lib/sheets/actions";
+import { isGoogleSheetsConfigured } from "@/lib/sheets/config";
 
 export type DailyActionState = {
   error?: string;
@@ -101,14 +105,18 @@ export async function saveDailyDayAction(
 
     let sheetsNotice: DailyActionState["sheetsNotice"];
     if (sheetsResult.status === "success") {
+      const dateLabel =
+        sheetsResult.dateCount != null
+          ? `${sheetsResult.dateCount} date${sheetsResult.dateCount === 1 ? "" : "s"}`
+          : "all saved dates";
       sheetsNotice = {
         type: "success",
-        message: `Google Sheets updated for ${team?.name ?? "team"} (${sheetsResult.rowCount} rows).`,
+        message: `Google Sheets rebuilt with ${dateLabel} (${sheetsResult.rowCount} rows), including ${team?.name ?? "team"} for ${date}.`,
       };
     } else if (sheetsResult.status === "failed") {
       sheetsNotice = {
         type: "error",
-        message: "Schedule saved, but Google Sheets update failed. Try saving again.",
+        message: "Schedule saved, but Google Sheets update failed. Try Sync all to Sheets.",
       };
     }
 
@@ -170,4 +178,44 @@ export async function removePartTimeAction(formData: FormData): Promise<void> {
   await removeDailyEntry(entryId);
   revalidatePath("/admin/daily");
   revalidatePath("/");
+}
+
+/** Push every saved schedule date to Google Sheets without editing a day. */
+export async function syncAllSheetsAction(
+  _prev: DailyActionState,
+  _formData: FormData,
+): Promise<DailyActionState> {
+  await requireUser();
+
+  if (!isGoogleSheetsConfigured()) {
+    return {
+      error: "Google Sheets is not configured on this deployment.",
+    };
+  }
+
+  const sheetsResult = await tryPushAllSavedSchedulesToSheets();
+
+  if (sheetsResult.status === "success") {
+    const dateLabel =
+      sheetsResult.dateCount != null
+        ? `${sheetsResult.dateCount} date${sheetsResult.dateCount === 1 ? "" : "s"}`
+        : "all saved dates";
+    return {
+      success: `Google Sheets rebuilt with ${dateLabel} (${sheetsResult.rowCount} rows).`,
+      sheetsNotice: {
+        type: "success",
+        message: `Synced every saved schedule date to Google Sheets.`,
+      },
+    };
+  }
+
+  if (sheetsResult.status === "skipped") {
+    return {
+      error: "No saved schedule dates to sync yet. Save a day first.",
+    };
+  }
+
+  return {
+    error: "Google Sheets sync failed. Check credentials and sheet sharing.",
+  };
 }
