@@ -52,6 +52,17 @@ export async function listDailyEntriesForDate(
   return demoStore.listDailyEntriesForDate(date, teamId);
 }
 
+export async function listSavedScheduleDates(): Promise<string[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      return await supabaseStore.listSavedScheduleDates();
+    } catch (error) {
+      console.error("Supabase saved-dates list failed:", error);
+    }
+  }
+  return demoStore.listSavedScheduleDates();
+}
+
 export async function ensureAllTeamsForDate(date: string): Promise<DailyEntry[]> {
   if (isSupabaseConfigured()) {
     try {

@@ -74,7 +74,7 @@ Copy keys into `.env.local` (see `.env.local.example`), then restart the dev ser
 4. **Share the spreadsheet** with the service account email (`client_email` in the JSON) as **Editor**.
 5. Optional: set `GOOGLE_SHEETS_TAB_NAME` if not using `Sheet1`.
 
-On `/admin/daily`, **Save day** publishes the **team you saved** to Google Sheets when credentials are configured. Other teams and other dates already in the sheet are left unchanged. Save each team separately to build a full day in the sheet.
+On `/admin/daily`, **Save day** rebuilds Google Sheets from **every saved schedule date** in the app (all teams), so you do not need to re-save older days just to refresh the sheet. Use **Sync all to Sheets** to push the same full rebuild without editing a day.
 
 ## Scripts
 
