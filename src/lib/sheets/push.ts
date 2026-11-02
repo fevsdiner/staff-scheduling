@@ -99,8 +99,8 @@ export async function pushScheduleDateToSheets(
 }
 
 /**
- * Rebuild the sheet from every date that already has saved daily rows.
- * One clear + write so the sheet matches the app without saving each day again.
+ * Refresh every date that already has saved daily rows in the app.
+ * Preserves sheet rows for dates the app does not list (never wipe history).
  */
 export async function pushAllSavedSchedulesToSheets(): Promise<{
   dateCount: number;
@@ -108,17 +108,34 @@ export async function pushAllSavedSchedulesToSheets(): Promise<{
 }> {
   const { sheets, spreadsheetId, tabName } = await getSheetsClient();
   const dates = await listSavedScheduleDates();
-  const dataRows: string[][] = [];
+  const datesBeingUpdated = new Set(dates);
+  const refreshedRows: string[][] = [];
 
   for (const date of dates) {
     const entries = await listDailyEntriesForDate(date);
     const teamIds = [...new Set(entries.map((entry) => entry.teamId))];
     if (teamIds.length === 0) continue;
-    dataRows.push(...(await buildDataRowsForDate(date, teamIds)));
+    refreshedRows.push(...(await buildDataRowsForDate(date, teamIds)));
   }
 
-  const merged = [HEADER_ROW, ...sortSheetDataRows(dataRows)];
   const range = `${tabName}!A:J`;
+  const existingResponse = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range,
+  });
+  const existing = (existingResponse.data.values as string[][]) ?? [];
+  let preserved: string[][] = [];
+  if (existing.length > 0) {
+    const [firstRow, ...rest] = existing;
+    const hasHeader = firstRow?.[0] === HEADER_ROW[0];
+    const dataRows = hasHeader ? rest : existing;
+    preserved = dataRows.filter((row) => !datesBeingUpdated.has(row[0] ?? ""));
+  }
+
+  const merged = [
+    HEADER_ROW,
+    ...sortSheetDataRows([...preserved, ...refreshedRows]),
+  ];
 
   await sheets.spreadsheets.values.clear({
     spreadsheetId,
@@ -132,5 +149,8 @@ export async function pushAllSavedSchedulesToSheets(): Promise<{
     requestBody: { values: merged },
   });
 
-  return { dateCount: dates.length, rowCount: dataRows.length };
+  return {
+    dateCount: dates.length,
+    rowCount: refreshedRows.length + preserved.length,
+  };
 }

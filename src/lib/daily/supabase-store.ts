@@ -242,9 +242,29 @@ export async function listDailyEntriesForDate(
 /** Distinct schedule dates that already have saved daily rows. */
 export async function listSavedScheduleDates(): Promise<string[]> {
   const supabase = createSupabaseClient();
-  const { data, error } = await supabase.from("daily_schedules").select("schedule_date");
-  if (error) throw new Error(error.message);
-  return [...new Set((data ?? []).map((row) => row.schedule_date as string))].sort();
+  // PostgREST / Supabase default max_rows is 1000 — page so we never drop later dates.
+  const pageSize = 1000;
+  const dates = new Set<string>();
+  let from = 0;
+
+  for (;;) {
+    const { data, error } = await supabase
+      .from("daily_schedules")
+      .select("schedule_date")
+      .order("schedule_date", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+
+    const rows = data ?? [];
+    for (const row of rows) {
+      dates.add(row.schedule_date as string);
+    }
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return [...dates].sort();
 }
 
 export async function saveDailyEntries(input: {

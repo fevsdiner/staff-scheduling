@@ -167,23 +167,44 @@ async function fetchRowsForDate(date) {
   });
 }
 
+async function listAllScheduleDates({ start, end } = {}) {
+  // PostgREST max_rows defaults to 1000 — page through so later dates are not dropped.
+  const pageSize = 1000;
+  const dates = new Set();
+  let from = 0;
+
+  for (;;) {
+    let query = supabase
+      .from("daily_schedules")
+      .select("schedule_date")
+      .order("schedule_date", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (start) query = query.gte("schedule_date", start);
+    if (end) query = query.lte("schedule_date", end);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const rows = data ?? [];
+    for (const row of rows) dates.add(row.schedule_date);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return [...dates].sort();
+}
+
 async function getDatesToSync() {
   const argDates = process.argv.slice(2).filter((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg));
   if (argDates.length >= 2) {
-    const start = argDates[0];
-    const end = argDates[argDates.length - 1];
-    const { data, error } = await supabase
-      .from("daily_schedules")
-      .select("schedule_date")
-      .gte("schedule_date", start)
-      .lte("schedule_date", end);
-    if (error) throw new Error(error.message);
-    return [...new Set((data ?? []).map((row) => row.schedule_date))].sort();
+    return listAllScheduleDates({
+      start: argDates[0],
+      end: argDates[argDates.length - 1],
+    });
   }
 
-  const { data, error } = await supabase.from("daily_schedules").select("schedule_date");
-  if (error) throw new Error(error.message);
-  return [...new Set((data ?? []).map((row) => row.schedule_date))].sort();
+  return listAllScheduleDates();
 }
 
 const dates = await getDatesToSync();
