@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "@/lib/env";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
-/** Server-only client for admin writes (bypasses RLS). Never expose to the browser. */
+/** Server-only client. The service role bypasses RLS. Never import from client components. */
 export function isSupabaseAdminConfigured(): boolean {
   return isSupabaseConfigured() && Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY"));
 }
@@ -14,7 +14,7 @@ export function createSupabaseAdminClient() {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Supabase admin is not configured. Set SUPABASE_SERVICE_ROLE_KEY in the server environment.",
+      "Supabase service role is not configured. Set SUPABASE_SERVICE_ROLE_KEY. The anon key cannot read or write tables after RLS is enabled.",
     );
   }
 

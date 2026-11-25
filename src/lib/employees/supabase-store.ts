@@ -4,7 +4,6 @@ import { getEmployeeById as getLocalEmployeeById } from "@/lib/employees/demo-st
 import type { Employee, EmploymentType } from "@/lib/employees/types";
 import { TEAM_OPTIONS, teamById } from "@/lib/employees/types";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createSupabaseClient } from "@/lib/supabase/client";
 
 const EMPLOYEE_SELECT = "id, name, team_id, active, created_at, birthday";
 
@@ -37,7 +36,7 @@ function mapRow(row: EmployeeRow): Employee {
 }
 
 export async function listEmployees(): Promise<Employee[]> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("employees")
     .select(EMPLOYEE_SELECT)
@@ -48,7 +47,7 @@ export async function listEmployees(): Promise<Employee[]> {
 }
 
 export async function getEmployeeById(id: string): Promise<Employee | undefined> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("employees")
     .select(EMPLOYEE_SELECT)
@@ -149,7 +148,7 @@ export async function updateEmployee(
 }
 
 export async function listScheduleDatesForEmployee(employeeId: string): Promise<string[]> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("daily_schedules")
     .select("schedule_date")

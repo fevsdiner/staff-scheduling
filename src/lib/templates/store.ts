@@ -13,12 +13,8 @@ function useSupabaseTemplates(): boolean {
 }
 
 export async function listTemplateVersions(teamId: string): Promise<TemplateVersion[]> {
-  if (useSupabaseTemplates()) {
-    try {
-      return await supabaseStore.listTemplateVersions(teamId);
-    } catch (error) {
-      console.error("Supabase template list failed:", error);
-    }
+  if (isSupabaseConfigured()) {
+    return supabaseStore.listTemplateVersions(teamId);
   }
   return demoStore.listTemplateVersions(teamId);
 }
@@ -26,12 +22,8 @@ export async function listTemplateVersions(teamId: string): Promise<TemplateVers
 export async function getTemplateVersion(
   versionId: string,
 ): Promise<TemplateVersion | null> {
-  if (useSupabaseTemplates()) {
-    try {
-      return await supabaseStore.getTemplateVersion(versionId);
-    } catch (error) {
-      console.error("Supabase template fetch failed:", error);
-    }
+  if (isSupabaseConfigured()) {
+    return supabaseStore.getTemplateVersion(versionId);
   }
   return demoStore.getTemplateVersion(versionId);
 }
@@ -40,12 +32,8 @@ export async function getTemplateVersionForDate(
   teamId: string,
   date: string,
 ): Promise<TemplateVersion | null> {
-  if (useSupabaseTemplates()) {
-    try {
-      return await supabaseStore.getTemplateVersionForDate(teamId, date);
-    } catch (error) {
-      console.error("Supabase template-for-date failed:", error);
-    }
+  if (isSupabaseConfigured()) {
+    return supabaseStore.getTemplateVersionForDate(teamId, date);
   }
   return demoStore.getTemplateVersionForDate(teamId, date);
 }

@@ -5,7 +5,6 @@ import { sortDailyEntries } from "@/lib/daily/sort";
 import type { DailyEntry, DailySegment } from "@/lib/daily/types";
 import { getEmployeeById } from "@/lib/employees/store";
 import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
-import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const ENTRY_SELECT = `
@@ -76,7 +75,7 @@ function toDbTime(time: string): string {
 }
 
 async function fetchEntries(teamId: string, date: string): Promise<DailyEntry[]> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("daily_schedules")
     .select(ENTRY_SELECT)
@@ -224,7 +223,7 @@ export async function listDailyEntriesForDate(
   date: string,
   teamId?: string,
 ): Promise<DailyEntry[]> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   let query = supabase
     .from("daily_schedules")
     .select(ENTRY_SELECT)
@@ -241,7 +240,7 @@ export async function listDailyEntriesForDate(
 
 /** Distinct schedule dates that already have saved daily rows. */
 export async function listSavedScheduleDates(): Promise<string[]> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   // PostgREST / Supabase default max_rows is 1000 — page so we never drop later dates.
   const pageSize = 1000;
   const dates = new Set<string>();

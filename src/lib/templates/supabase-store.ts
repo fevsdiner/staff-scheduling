@@ -1,7 +1,6 @@
 import { randomUUID } from "crypto";
 
 import { getEmployeeById, listEmployees } from "@/lib/employees/store";
-import { createSupabaseClient } from "@/lib/supabase/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildSeedVersion } from "@/lib/templates/demo-store";
 import { assertValidShiftSegments } from "@/lib/schedule/validate-segments";
@@ -73,7 +72,7 @@ function mapVersion(row: VersionRow): TemplateVersion {
 }
 
 async function fetchVersionsForTeam(teamId: string): Promise<TemplateVersion[]> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("weekly_template_versions")
     .select(VERSION_SELECT)
@@ -140,7 +139,7 @@ export async function listTemplateVersions(teamId: string): Promise<TemplateVers
 }
 
 export async function getTemplateVersion(versionId: string): Promise<TemplateVersion | null> {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("weekly_template_versions")
     .select(VERSION_SELECT)

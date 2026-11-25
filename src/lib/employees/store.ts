@@ -12,22 +12,14 @@ const MISSING_SERVICE_ROLE_MESSAGE =
 
 export async function listEmployees(): Promise<Employee[]> {
   if (isSupabaseConfigured()) {
-    try {
-      return await supabaseStore.listEmployees();
-    } catch (error) {
-      console.error("Supabase employee list failed:", error);
-    }
+    return supabaseStore.listEmployees();
   }
   return demoStore.listEmployees();
 }
 
 export async function getEmployeeById(id: string): Promise<Employee | undefined> {
   if (isSupabaseConfigured()) {
-    try {
-      return await supabaseStore.getEmployeeById(id);
-    } catch (error) {
-      console.error("Supabase employee fetch failed:", error);
-    }
+    return supabaseStore.getEmployeeById(id);
   }
   return demoStore.getEmployeeById(id);
 }
