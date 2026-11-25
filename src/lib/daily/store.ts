@@ -22,18 +22,14 @@ type SaveInput = {
 };
 
 const MISSING_SERVICE_ROLE_MESSAGE =
-  "Add SUPABASE_SERVICE_ROLE_KEY to Vercel (Supabase → Settings → API → service_role). The anon key reads schedules but cannot save admin changes.";
+  "Add SUPABASE_SERVICE_ROLE_KEY to Vercel (Supabase → Settings → API → service_role). Database reads and writes both use that key.";
 
 export async function getOrCreateDailyEntries(
   teamId: string,
   date: string,
 ): Promise<DailyEntry[]> {
   if (isSupabaseConfigured()) {
-    try {
-      return await supabaseStore.getOrCreateDailyEntries(teamId, date);
-    } catch (error) {
-      console.error("Supabase daily read failed:", error);
-    }
+    return supabaseStore.getOrCreateDailyEntries(teamId, date);
   }
   return demoStore.getOrCreateDailyEntries(teamId, date);
 }
@@ -43,38 +39,26 @@ export async function listDailyEntriesForDate(
   teamId?: string,
 ): Promise<DailyEntry[]> {
   if (isSupabaseConfigured()) {
-    try {
-      return await supabaseStore.listDailyEntriesForDate(date, teamId);
-    } catch (error) {
-      console.error("Supabase daily list failed:", error);
-    }
+    return supabaseStore.listDailyEntriesForDate(date, teamId);
   }
   return demoStore.listDailyEntriesForDate(date, teamId);
 }
 
 export async function listSavedScheduleDates(): Promise<string[]> {
   if (isSupabaseConfigured()) {
-    try {
-      return await supabaseStore.listSavedScheduleDates();
-    } catch (error) {
-      console.error("Supabase saved-dates list failed:", error);
-    }
+    return supabaseStore.listSavedScheduleDates();
   }
   return demoStore.listSavedScheduleDates();
 }
 
 export async function ensureAllTeamsForDate(date: string): Promise<DailyEntry[]> {
   if (isSupabaseConfigured()) {
-    try {
-      const { TEAM_OPTIONS } = await import("@/lib/employees/types");
-      const entries: DailyEntry[] = [];
-      for (const team of TEAM_OPTIONS) {
-        entries.push(...(await supabaseStore.getOrCreateDailyEntries(team.id, date)));
-      }
-      return entries;
-    } catch (error) {
-      console.error("Supabase ensure-all-teams failed:", error);
+    const { TEAM_OPTIONS } = await import("@/lib/employees/types");
+    const entries: DailyEntry[] = [];
+    for (const team of TEAM_OPTIONS) {
+      entries.push(...(await supabaseStore.getOrCreateDailyEntries(team.id, date)));
     }
+    return entries;
   }
   return demoStore.ensureAllTeamsForDate(date);
 }

@@ -1,7 +1,8 @@
 import { formatShortDay } from "@/lib/schedule/datetime";
 import { getDemoTeams } from "@/lib/schedule/demo-data";
 import type { DaySchedule, ScheduleEntry, TeamSchedule } from "@/lib/schedule/types";
-import { createSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatEmployeeDisplayName } from "@/lib/employees/display";
 import { listDailyEntriesForDate } from "@/lib/daily/store";
 import { TEAM_OPTIONS, teamById, teamBySlug } from "@/lib/employees/types";
@@ -72,7 +73,7 @@ export async function getTeamOptions() {
     return getDemoTeams();
   }
 
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.from("teams").select("name, slug").order("name");
 
   if (error) {
